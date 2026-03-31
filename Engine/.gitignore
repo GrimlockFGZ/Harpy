@@ -1,0 +1,39 @@
+## --- .NET / Visual Studio / Rider ---
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+/packages/
+TestResults/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## --- JetBrains Rider ---
+.idea/
+*.sln.DotSettings.user
+_ReSharper.Caches/
+riderModule.iml
+
+## --- Build Artifacts & Scripts ---
+.output.txt
+*.log
+*.tmp
+publish/
+*.publish.xml
+
+## --- Operating System ---
+.DS_Store
+Thumbs.db
+
+## --- Crash Dumps & Debugging ---
+*.pdb
+*.vshost.exe
+*.vshost.exe.config
+*.vshost.exe.manifest
+
+## --- Tooling ---
+.vs/
+.history/
+.ionide/

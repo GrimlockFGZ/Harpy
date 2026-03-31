@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:HarpyEngine.Sandbox.Editor"
+             xmlns:models="clr-namespace:HarpyEngine.Sandbox.Editor.Models"
+             x:Class="HarpyEngine.Sandbox.Editor.Hierarchy"
+             x:DataType="models:HierarchyViewModel"
+             x:CompileBindings="True">
+    
+    <StackPanel>
+        <TextBlock DockPanel.Dock="Top" 
+                   Text="Hierarchy" 
+                   Foreground="White"
+                   FontSize="12" 
+                   Margin="10"/>
+        <ListBox ItemsSource="{Binding Entries}" />
+    </StackPanel>
+
+</UserControl>

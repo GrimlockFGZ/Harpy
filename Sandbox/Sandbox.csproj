@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
+     
+        <OutputType>Exe</OutputType>
+        
+        <RootNamespace>HarpyEngine.Sandbox</RootNamespace>
+
+        <ApplicationIcon>Assets\Favicon.ico</ApplicationIcon>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+        <PublishAot>true</PublishAot>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- external package references -->
+        <AvaloniaResource Include="Assets\Favicon.ico" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />
+        <PackageReference Include="Avalonia" Version="11.3.12" />
+
+        <!-- internal dependencies -->
+        <ProjectReference Include="..\Engine\Engine.csproj" />
+        <ProjectReference Include="..\Engine.Rendering\Engine.Rendering.csproj" />
+        <ProjectReference Include="..\Engine.Resources\Engine.Resources.csproj" />
+    </ItemGroup>
+    
+</Project>
