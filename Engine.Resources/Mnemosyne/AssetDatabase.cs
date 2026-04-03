@@ -14,7 +14,7 @@ public class AssetDatabase
 
     public record struct AssetInfo(string RelativePath, string AbsolutePath, AssetType Type, DateTime LastModified);
 
-    private static readonly Dictionary<string, AssetType> extensionMap = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, AssetType> ExtensionMap = new(StringComparer.OrdinalIgnoreCase)
     {
         { ".glsl", AssetType.Shader },
         { ".compute", AssetType.Shader },
@@ -30,12 +30,11 @@ public class AssetDatabase
         { ".mat", AssetType.Material },
     };
 
-    private static readonly FrozenDictionary<string, AssetType> _fastMap = 
-        extensionMap.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+    private static readonly FrozenDictionary<string, AssetType> FastMap = 
+        ExtensionMap.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     private readonly ConcurrentQueue<string> _dirtyFiles = new();
     private readonly Dictionary<string, AssetInfo> _assets = new(2048, StringComparer.OrdinalIgnoreCase);
-    private FileSystemWatcher? _watcher;
     private string _root = "";
 
     public event Action<AssetInfo>? AssetUpdated;
@@ -46,16 +45,16 @@ public class AssetDatabase
         _root = rootPath;
         ImportFolder(rootPath); 
         
-        _watcher = new FileSystemWatcher(rootPath, "*.*")
+        var watcher = new FileSystemWatcher(rootPath, "*.*")
         {
             IncludeSubdirectories = true,
             NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
             EnableRaisingEvents = true
         };
 
-        _watcher.Changed += (s, e) => UpdateAssetMetadata(e.FullPath);
-        _watcher.Created += (s, e) => UpdateAssetMetadata(e.FullPath);
-        _watcher.Deleted += (s, e) => OnDeleted(e.FullPath);
+        watcher.Changed += (s, e) => UpdateAssetMetadata(e.FullPath);
+        watcher.Created += (s, e) => UpdateAssetMetadata(e.FullPath);
+        watcher.Deleted += (s, e) => OnDeleted(e.FullPath);
     }
 
     private void OnDeleted(string absolutePath)
@@ -95,14 +94,14 @@ public class AssetDatabase
     
     private static bool TryGetAssetType(ReadOnlySpan<char> extension, out AssetType type)
     {
-        var lookup = _fastMap.GetAlternateLookup<ReadOnlySpan<char>>();
+        var lookup = FastMap.GetAlternateLookup<ReadOnlySpan<char>>();
         return lookup.TryGetValue(extension, out type);
     }
 
     public void ImportFolder(string rootPath)
     {
         var options = new EnumerationOptions { RecurseSubdirectories = true };
-        var lookup = _fastMap.GetAlternateLookup<ReadOnlySpan<char>>();
+        var lookup = FastMap.GetAlternateLookup<ReadOnlySpan<char>>();
         int rootLen = rootPath.EndsWith(Path.DirectorySeparatorChar) ? rootPath.Length : rootPath.Length + 1;
 
         var enumerable = new FileSystemEnumerable<bool>(
