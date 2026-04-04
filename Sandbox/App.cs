@@ -8,7 +8,6 @@ public class App : Application
 {
     public override void Initialize()
     {
-        // Load the base Avalonia theme
         Styles.Add(new Avalonia.Themes.Fluent.FluentTheme());
     }
 

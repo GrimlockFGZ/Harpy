@@ -1,5 +1,6 @@
 using Engine.Core;
 using Engine.Exceptions;
+using HarpyEngine.Rendering.Helios;
 using Silk.NET.OpenGL;
 
 namespace HarpyEngine.Rendering;
@@ -15,7 +16,7 @@ public class Shader
     /// </summary>
     public uint Handle { get; private set; }
 
-    private readonly GL _gl;
+    private readonly GlContext _gl;
     private readonly string _vPath;
     private readonly string _fPath;
 
@@ -25,7 +26,7 @@ public class Shader
     /// <param name="gl">The OpenGL context.</param>
     /// <param name="vertexPath">The file path to the vertex shader source.</param>
     /// <param name="fragmentPath">The file path to the fragment shader source.</param>
-    public Shader(GL gl, string vertexPath, string fragmentPath)
+    public Shader(GlContext gl, string vertexPath, string fragmentPath)
     {
         _gl = gl;
         _vPath = vertexPath;
@@ -36,7 +37,7 @@ public class Shader
     /// <summary>
     /// Sets this shader program as the active program in the OpenGL context.
     /// </summary>
-    public void Use() => _gl.UseProgram(Handle);
+    public void Use() => _gl.Api.UseProgram(Handle);
 
     /// <summary>
     /// Reloads the shader program by recompiling and relinking the source files from disk.
@@ -48,25 +49,25 @@ public class Shader
             var vertex = CompileShader(ShaderType.VertexShader, File.ReadAllText(_vPath));
             var fragment = CompileShader(ShaderType.FragmentShader, File.ReadAllText(_fPath));
 
-            var newHandle = _gl.CreateProgram();
-            _gl.AttachShader(newHandle, vertex);
-            _gl.AttachShader(newHandle, fragment);
-            _gl.LinkProgram(newHandle);
+            var newHandle = _gl.Api.CreateProgram();
+            _gl.Api.AttachShader(newHandle, vertex);
+            _gl.Api.AttachShader(newHandle, fragment);
+            _gl.Api.LinkProgram(newHandle);
 
-            _gl.GetProgram(newHandle, ProgramPropertyARB.LinkStatus, out var status);
+            _gl.Api.GetProgram(newHandle, ProgramPropertyARB.LinkStatus, out var status);
             if (status == 0)
             {
-                Logger.LogError($"[Shader Error] Link Fail: {_gl.GetProgramInfoLog(newHandle)}");
-                _gl.DeleteProgram(newHandle);
+                Logger.LogError($"[Shader Error] Link Fail: {_gl.Api.GetProgramInfoLog(newHandle)}");
+                _gl.Api.DeleteProgram(newHandle);
                 return;
             }
 
             // Successfully linked, now swap
-            if (Handle != 0) _gl.DeleteProgram(Handle);
+            if (Handle != 0) _gl.Api.DeleteProgram(Handle);
             Handle = newHandle;
 
-            _gl.DeleteShader(vertex);
-            _gl.DeleteShader(fragment);
+            _gl.Api.DeleteShader(vertex);
+            _gl.Api.DeleteShader(fragment);
             Logger.LogSuccess($"Reloaded: {Path.GetFileName(_vPath)}");
         }
         catch (ResourceNotFoundException ex)
@@ -84,18 +85,18 @@ public class Shader
     /// <exception cref="Exception">Thrown if shader compilation fails.</exception>
     private uint CompileShader(ShaderType type, string source)
     {
-        var shader = _gl.CreateShader(type);
-        _gl.ShaderSource(shader, source);
-        _gl.CompileShader(shader);
+        var shader = _gl.Api.CreateShader(type);
+        _gl.Api.ShaderSource(shader, source);
+        _gl.Api.CompileShader(shader);
 
-        _gl.GetShader(shader, ShaderParameterName.CompileStatus, out var status);
+        _gl.Api.GetShader(shader, ShaderParameterName.CompileStatus, out var status);
 
         // Happy Path: Status 1 (GL_TRUE)
         if (status != 0) return shader;
 
         // Error Path:
-        var infoLog = _gl.GetShaderInfoLog(shader);
-        _gl.DeleteShader(shader);
+        var infoLog = _gl.Api.GetShaderInfoLog(shader);
+        _gl.Api.DeleteShader(shader);
 
         string typeName = Enum.GetName(type) ?? "UnknownShader";
 

@@ -6,13 +6,13 @@ namespace HarpyEngine.Rendering.Helios;
 
 public class HarpyRenderer
 {
-    private readonly GL _gl;
+    private readonly GlContext _gl;
     private Mesh _triangleMesh = null!;
     private double _totalTime;
     private static readonly string BaseDir = AppDomain.CurrentDomain.BaseDirectory;
     private readonly string _assetDir = BaseDir + "Assets/";
 
-    public HarpyRenderer(GL gl)
+    public HarpyRenderer(GlContext gl)
     {
         _gl = gl;
     }
@@ -47,12 +47,12 @@ public class HarpyRenderer
 
     private void RenderShaders(double deltaTime, bool isWireframe)
     {
-        _gl.ClearColor(Color.FromArgb(30, 30, 35));
-        _gl.Clear((uint)ClearBufferMask.ColorBufferBit | (uint)ClearBufferMask.DepthBufferBit);
+        _gl.Api.ClearColor(Color.FromArgb(30, 30, 35));
+        _gl.Api.Clear((uint)ClearBufferMask.ColorBufferBit | (uint)ClearBufferMask.DepthBufferBit);
 
         if (isWireframe)
         {
-            _gl.PolygonMode(GLEnum.FrontAndBack, GLEnum.Line);
+            _gl.Api.PolygonMode(GLEnum.FrontAndBack, GLEnum.Line);
         }
 
         _totalTime += deltaTime;
@@ -60,7 +60,7 @@ public class HarpyRenderer
         shader.Use();
         
         var program = shader.Handle;
-        _gl.Uniform1(_gl.GetUniformLocation(program, "uGlobalTime"), (float)_totalTime);
+        _gl.Api.Uniform1(_gl.Api.GetUniformLocation(program, "uGlobalTime"), (float)_totalTime);
         
         var radius = 0.5f;
         for (var i = 0; i < 5; i++)
@@ -68,11 +68,11 @@ public class HarpyRenderer
             var angle = i * 2f * (float)Math.PI / 5f;
             var x = (float)Math.Cos(angle) * radius;
             var y = (float)Math.Sin(angle) * radius;
-            var loc = _gl.GetUniformLocation(program, $"uOffsets[{i}]");
-            _gl.Uniform2(loc, x, y);
+            var loc = _gl.Api.GetUniformLocation(program, $"uOffsets[{i}]");
+            _gl.Api.Uniform2(loc, x, y);
         }
         
         _triangleMesh.DrawInstanced(5);
-        _gl.PolygonMode(GLEnum.FrontAndBack, GLEnum.Fill);
+        _gl.Api.PolygonMode(GLEnum.FrontAndBack, GLEnum.Fill);
     }
 }

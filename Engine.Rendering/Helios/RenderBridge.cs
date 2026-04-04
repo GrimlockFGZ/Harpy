@@ -5,9 +5,9 @@ namespace HarpyEngine.Rendering.Helios;
 
 public class RenderBridge
 {
-    private readonly GL _gl;
+    private readonly GlContext _gl;
 
-    public RenderBridge(GL gl)
+    public RenderBridge(GlContext gl)
     {
         _gl = gl;
         

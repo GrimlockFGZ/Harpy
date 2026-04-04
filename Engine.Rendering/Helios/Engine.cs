@@ -18,7 +18,7 @@ public class Engine
     /// <summary>
     /// The OpenGL context for rendering.
     /// </summary>
-    public GL Gl { get; private set; } = null!;
+    public GlContext Gl { get; private set; } = null!;
 
     /// <summary>
     /// The input context for handling user input.
@@ -62,7 +62,7 @@ public class Engine
         EngineWindow.Load += InternalLoad;
         EngineWindow.Resize += (newSize) => 
         {
-            Gl.Viewport(0, 0, (uint)newSize.X, (uint)newSize.Y);
+            Gl.Api.Viewport(0, 0, (uint)newSize.X, (uint)newSize.Y);
         };
 
         EngineWindow.Render += (d) => OnRender?.Invoke(d);
@@ -75,13 +75,13 @@ public class Engine
     /// </summary>
     private void InternalLoad()
     {
-        Gl = EngineWindow.CreateOpenGL();
+        Gl = new GlContext(EngineWindow.CreateOpenGL());
         Input = EngineWindow.CreateInput(); 
 
-        if (Gl == null) 
+        if (Gl.Api == null) 
             throw new RenderingException("Failed to create OpenGL context. Ensure your GPU drivers are up to date and support OpenGL 4.5+.");
 
-        Gl.Viewport(0, 0, (uint)EngineWindow.Size.X, (uint)EngineWindow.Size.Y);
+        Gl.Api.Viewport(0, 0, (uint)EngineWindow.Size.X, (uint)EngineWindow.Size.Y);
         OnLoad?.Invoke();
     }
 

@@ -14,7 +14,8 @@ public class HarpyViewport : OpenGlControlBase
     protected override void OnOpenGlInit(GlInterface gl)
     {
         var silkGl = Silk.NET.OpenGL.GL.GetApi(gl.GetProcAddress);
-        _renderer = new HarpyRenderer(silkGl);
+        var context = new GlContext(silkGl);
+        _renderer = new HarpyRenderer(context);
         _renderer.Init();
         _lastTime = DateTime.UtcNow;
     }
