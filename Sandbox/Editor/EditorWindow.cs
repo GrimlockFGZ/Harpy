@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Avalonia.Controls;
 using Avalonia.Threading;
+using HarpyEngine.Resources;
 using HarpyEngine.Resources.Mnemosyne;
 
 namespace HarpyEngine.Sandbox.Editor
@@ -8,16 +9,15 @@ namespace HarpyEngine.Sandbox.Editor
     public partial class EditorWindow : Window
     {
         private readonly AssetDatabase _db;
-        private readonly Dictionary<string, AssetDatabase.AssetInfo> _assetCache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, AssetInfo> _assetCache = new(StringComparer.OrdinalIgnoreCase);
 
-        public ObservableCollection<AssetDatabase.AssetInfo> UiAssets { get; } = new();
+        public ObservableCollection<AssetInfo> UiAssets { get; } = new();
 
         public EditorWindow()
         {
             InitializeComponent();
             
             DataContext = this;
-            HierarchyPanel.DataContext = this;
 
             Title = "Harpy Engine";
             WindowState = WindowState.Maximized;
@@ -42,7 +42,7 @@ namespace HarpyEngine.Sandbox.Editor
             }
         }
 
-        private void OnAssetUpdated(AssetDatabase.AssetInfo info)
+        private void OnAssetUpdated(AssetInfo info)
         {
             Dispatcher.UIThread.Post(() =>
             {

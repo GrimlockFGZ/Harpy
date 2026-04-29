@@ -1,4 +1,5 @@
-namespace Engine.Core.Core.ECS;
+
+namespace Engine.Core.ECS;
 
 public interface ISystem
 {

@@ -4,6 +4,7 @@
         xmlns:global="clr-namespace:"
         xmlns:helpers="clr-namespace:HarpyEngine.Sandbox.Helpers"
         xmlns:mnemosyne="clr-namespace:HarpyEngine.Resources.Mnemosyne;assembly=Engine.Resources"
+        xmlns:resources="clr-namespace:HarpyEngine.Resources;assembly=Engine.Resources"
         x:Class="HarpyEngine.Sandbox.Editor.EditorWindow"
         x:DataType="editor:EditorWindow"
         x:CompileBindings ="True"
@@ -28,7 +29,7 @@
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="mnemosyne:AssetDatabase+AssetInfo">
+                <DataTemplate x:DataType="resources:AssetInfo">
                     <StackPanel Width="90" Margin="5">
                         <Border Height="60" 
                                 Background="{Binding Type, Converter={x:Static helpers:TypeToBrushConverter.Instance}}" 

@@ -10,7 +10,6 @@ namespace HarpyEngine.Sandbox.Editor // <-- Make sure this matches your project 
         public Hierarchy()
         {
             InitializeComponent();
-            DataContext = new HierarchyViewModel();
         }
     }
 }

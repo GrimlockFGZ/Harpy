@@ -7,12 +7,6 @@ namespace HarpyEngine.Resources.Mnemosyne;
 
 public class AssetDatabase
 {
-    public enum AssetType
-    {
-        Shader, Texture, Script, Model, Animation, Material, Unknown
-    }
-
-    public record struct AssetInfo(string RelativePath, string AbsolutePath, AssetType Type, DateTime LastModified);
 
     private static readonly Dictionary<string, AssetType> ExtensionMap = new(StringComparer.OrdinalIgnoreCase)
     {
