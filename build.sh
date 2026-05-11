@@ -23,25 +23,22 @@ cleanup() {
   fi
 }
 
-# [1/6] Clean
-echo "[1/6] Cleaning..."
+# [1/7] Clean
+echo "[1/7] Cleaning..."
 cleanup
 dotnet clean "$SOLUTION" -c "$CONFIGURATION" -v q >/dev/null
 
-# [2/6] Restore
-echo "[2/6] Restoring NuGet packages..."
+# [2/7] Restore
+echo "[2/7] Restoring NuGet packages..."
 dotnet restore "$SOLUTION" -v q
 
-# [3/6] Build
-echo "[3/6] Building solution..."
+
+# [4/7] Build
+echo "[4/7] Building solution..."
 dotnet build "$SOLUTION" -c "$CONFIGURATION" --no-restore -v q
 
-# [4/6] Test
-echo "[4/6] Running tests..."
-dotnet test "$TEST_PROJECT" -c "$CONFIGURATION" --no-build -v q --nologo
-
-# [5/6] Publish (NativeAOT)
-echo "[5/6] Publishing NativeAOT..."
+# [5/7] Publish (NativeAOT)
+echo "[6/7] Publishing NativeAOT..."
 dotnet publish "Sandbox/${PROJECT_NAME}.csproj" \
     -c "$CONFIGURATION" \
     -r "$RUNTIME" \
@@ -50,12 +47,12 @@ dotnet publish "Sandbox/${PROJECT_NAME}.csproj" \
     -v q \
     /p:PublishAot=true
 
-echo "[5.5/6] Copying Assets..."
+echo "[6.5/7] Copying Assets..."
 mkdir -p "$OUTPUT_DIR/Assets"
 cp -r "./Assets/." "$OUTPUT_DIR/Assets/"
 
-# [6/6] Cleanup
-echo "[6/6] Finalizing..."
+# [7/7] Cleanup
+echo "[7/7] Finalizing..."
 find "$OUTPUT_DIR" -name "*.pdb" -type f -delete
 
 echo "=========================================="

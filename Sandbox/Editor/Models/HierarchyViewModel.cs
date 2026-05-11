@@ -1,13 +1,32 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using Avalonia.Threading;
 using Engine.Core;
 
 namespace HarpyEngine.Sandbox.Editor.Models
 {
-    public class HierarchyViewModel 
+    public class HierarchyViewModel : INotifyPropertyChanged
     {
         private Registry? _registry;
-        public ObservableCollection<string> Entries { get; } = [];
+        private HierarchyEntry? _selectedEntry;
+
+        public ObservableCollection<HierarchyEntry> Entries { get; } = [];
+
+        public HierarchyEntry? SelectedEntry
+        {
+            get => _selectedEntry;
+            set
+            {
+                if (_selectedEntry == value) return;
+                _selectedEntry = value;
+                OnPropertyChanged();
+                SelectedEntryChanged?.Invoke(value);
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        public event Action<HierarchyEntry?>? SelectedEntryChanged;
         
         public HierarchyViewModel()
         {
@@ -31,7 +50,7 @@ namespace HarpyEngine.Sandbox.Editor.Models
 
                 foreach (var entity in _registry.GetAllEntities())
                 {
-                    Entries.Add($"Entity {entity.Id}");
+                    Entries.Add(HierarchyEntry.FromEntity(entity));
                 }
             }
         }
@@ -40,7 +59,7 @@ namespace HarpyEngine.Sandbox.Editor.Models
         {
             Dispatcher.UIThread.Post(() =>
             {
-                Entries.Add($"Entity {entity.Id}");
+                Entries.Add(HierarchyEntry.FromEntity(entity));
             });
         }
 
@@ -48,13 +67,36 @@ namespace HarpyEngine.Sandbox.Editor.Models
         {
             Dispatcher.UIThread.Post(() =>
             {
-                Entries.Remove($"Entity {entity.Id}");
+                var entry = Entries.FirstOrDefault(e => e.Entity == entity);
+                if (entry is null) return;
+
+                var removedSelected = SelectedEntry == entry;
+                Entries.Remove(entry);
+
+                if (removedSelected)
+                {
+                    SelectedEntry = null;
+                }
             });
         }
 
-        public void AddEntry(string entry)
+        public Entity CreateEntity()
         {
-            Entries.Add(entry);
+            if (_registry is null)
+                throw new InvalidOperationException("Registry is not set.");
+
+            return _registry.CreateEntity();
+        }
+
+        public void DestroySelectedEntity()
+        {
+            if (_registry is null || SelectedEntry is null) return;
+            _registry.DestroyEntity(SelectedEntry.Entity);
+        }
+
+        private void OnPropertyChanged([CallerMemberName] string? memberName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(memberName));
         }
     }
 }

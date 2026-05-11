@@ -17,9 +17,9 @@
     <ItemGroup>
         <!-- external package references -->
         <AvaloniaResource Include="Assets\Favicon.ico" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />
-        <PackageReference Include="Avalonia" Version="11.3.12" />
+        <PackageReference Include="Avalonia.Desktop" Version="12.0.2" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.2" />
+        <PackageReference Include="Avalonia" Version="12.0.2" />
 
         <!-- internal dependencies -->
         <ProjectReference Include="..\Engine\Engine.csproj" />

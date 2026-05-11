@@ -9,11 +9,11 @@ namespace Engine;
 /// Immutable by default — all mutation returns a new Transform.
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
-public readonly struct Transform : IEquatable<Transform>
+public  struct Transform : IEquatable<Transform>
 {
-    public readonly Vector3 Position;
-    public readonly Quaternion Rotation;
-    public readonly Vector3 Scale;
+    public  Vector3 Position;
+    public  Quaternion Rotation;
+    public  Vector3 Scale;
 
     // --- Static Constants ---
     public static readonly Transform Identity = new(Vector3.Zero, Quaternion.Identity, Vector3.One);

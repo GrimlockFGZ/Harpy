@@ -14,6 +14,11 @@ public struct Velocity
     public float X, Y;
 }
 
+public struct Health
+{
+    public int Value;
+}
+
 [TestFixture]
 public class RegistryTests
 {
@@ -93,5 +98,67 @@ public class RegistryTests
         Assert.That(view.Contains(e1), Is.True);
         Assert.That(view.Contains(e3), Is.True);
         Assert.That(view.Contains(e2), Is.False);
+    }
+
+    [Test]
+    public void View_WithTwoComponents_ReturnsOnlyEntitiesWithBoth()
+    {
+        var e1 = _registry.CreateEntity();
+        var e2 = _registry.CreateEntity();
+        var e3 = _registry.CreateEntity();
+
+        _registry.AddComponent(e1, new Position());
+        _registry.AddComponent(e1, new Velocity());
+
+        _registry.AddComponent(e2, new Position());
+
+        _registry.AddComponent(e3, new Velocity());
+
+        var view = _registry.View<Position, Velocity>().ToArray();
+
+        Assert.That(view.Length, Is.EqualTo(1));
+        Assert.That(view[0], Is.EqualTo(e1));
+    }
+
+    [Test]
+    public void View_WithThreeComponents_ReturnsOnlyEntitiesWithAllThree()
+    {
+        var e1 = _registry.CreateEntity();
+        var e2 = _registry.CreateEntity();
+        var e3 = _registry.CreateEntity();
+        var e4 = _registry.CreateEntity();
+
+        _registry.AddComponent(e1, new Position());
+        _registry.AddComponent(e1, new Velocity());
+        _registry.AddComponent(e1, new Health());
+
+        _registry.AddComponent(e2, new Position());
+        _registry.AddComponent(e2, new Velocity());
+
+        _registry.AddComponent(e3, new Position());
+        _registry.AddComponent(e3, new Health());
+
+        _registry.AddComponent(e4, new Velocity());
+        _registry.AddComponent(e4, new Health());
+
+        var view = _registry.View<Position, Velocity, Health>().ToArray();
+
+        Assert.That(view.Length, Is.EqualTo(1));
+        Assert.That(view[0], Is.EqualTo(e1));
+    }
+
+    [Test]
+    public void View_DoesNotReturnDestroyedEntities()
+    {
+        var entity = _registry.CreateEntity();
+
+        _registry.AddComponent(entity, new Position());
+        _registry.AddComponent(entity, new Velocity());
+
+        _registry.DestroyEntity(entity);
+
+        var view = _registry.View<Position, Velocity>().ToArray();
+
+        Assert.That(view, Is.Empty);
     }
 }

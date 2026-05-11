@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using HarpyEngine.Sandbox.Editor.Models;
 
 namespace HarpyEngine.Sandbox.Editor // <-- Make sure this matches your project root/folder structure
@@ -10,6 +11,16 @@ namespace HarpyEngine.Sandbox.Editor // <-- Make sure this matches your project 
         public Hierarchy()
         {
             InitializeComponent();
+        }
+
+        private void OnAddEntityClick(object? sender, RoutedEventArgs e)
+        {
+            ViewModel.CreateEntity();
+        }
+
+        private void OnRemoveEntityClick(object? sender, RoutedEventArgs e)
+        {
+            ViewModel.DestroySelectedEntity();
         }
     }
 }

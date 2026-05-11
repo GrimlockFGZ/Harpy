@@ -1,18 +1,101 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="clr-namespace:HarpyEngine.Sandbox.Editor"
              xmlns:models="clr-namespace:HarpyEngine.Sandbox.Editor.Models"
              x:Class="HarpyEngine.Sandbox.Editor.Hierarchy"
              x:DataType="models:HierarchyViewModel"
              x:CompileBindings="True">
-    
-    <StackPanel>
-        <TextBlock DockPanel.Dock="Top" 
-                   Text="Hierarchy" 
-                   Foreground="White"
-                   FontSize="12" 
-                   Margin="10"/>
-        <ListBox ItemsSource="{Binding Entries}" />
-    </StackPanel>
 
+    <UserControl.Styles>
+        <!-- Matching Inspector Label Styles -->
+        <Style Selector="TextBlock.Label">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#909090"/>
+        </Style>
+
+        <!-- Tool Buttons matching Inspector buttons -->
+        <Style Selector="Button, DropDownButton">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Background" Value="#333"/>
+            <Setter Property="Padding" Value="8,4"/>
+        </Style>
+
+        <!-- ListBox Modernization -->
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="#151515"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#333"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+
+        <!-- ListBoxItem Selection (Engine-style highlight) -->
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="12,4"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="MinHeight" Value="24"/>
+        </Style>
+        
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#3d3d3d" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto, Auto, *" Margin="12">
+        
+        <!-- Section Header (Matches Inspector exactly) -->
+        <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,12">
+            <TextBlock Text="HIERARCHY" 
+                       Foreground="#606060" 
+                       FontSize="10" 
+                       FontWeight="Bold" 
+                       LetterSpacing="1"/>
+            <Rectangle Height="1" Fill="#333"/>
+        </StackPanel>
+
+        <!-- Toolbar (Using the button style from your Inspector) -->
+        <Grid Grid.Row="1" ColumnDefinitions="*, 34" Margin="0,0,0,8">
+            <DropDownButton Grid.Column="0" 
+                            Content="+ Add Entity"
+                            HorizontalAlignment="Stretch" 
+                            HorizontalContentAlignment="Center">
+                <DropDownButton.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                        <MenuItem Header="User" Click="OnAddEntityClick" />
+                        <MenuItem Header="Empty Entity" />
+                    </MenuFlyout>
+                </DropDownButton.Flyout>
+            </DropDownButton>
+            <Button Grid.Column="1" 
+                    Content="-" 
+                    Click="OnRemoveEntityClick" 
+                    Margin="4,0,0,0"
+                    HorizontalAlignment="Stretch" 
+                    HorizontalContentAlignment="Center"/>
+        </Grid>
+
+        <!-- Entity List (Wrapped in a Border like Inspector components) -->
+        <Border Grid.Row="2" 
+                Background="#282828" 
+                CornerRadius="3" 
+                BorderBrush="#383838" 
+                BorderThickness="1">
+            <ListBox ItemsSource="{Binding Entries}"
+                     SelectedItem="{Binding SelectedEntry}"
+                     BorderThickness="0"
+                     Background="Transparent">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:HierarchyEntry">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <!-- Optional icon placeholder for engine feel -->
+                            <PathIcon Data="M12,18H6V15H12M18,9V15H12V18H18V21L23,16.5L18,12V15H14V9H18V6L13,1.5L8,6V9H12V13H8V9H2V15H8V13H12V15H14V9H18Z" 
+                                      Width="10" 
+                                      Height="10" 
+                                      Foreground="#606060"/>
+                            <TextBlock Text="{Binding Name}" Foreground="#CFCFCF" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+    </Grid>
 </UserControl>

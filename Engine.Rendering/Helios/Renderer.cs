@@ -8,6 +8,7 @@ public class HarpyRenderer(GlContext gl)
 {
     private Mesh _triangleMesh = null!;
     private double _totalTime;
+    public int TriangleInstanceCount { get; set; }
     private static readonly string BaseDir = AppDomain.CurrentDomain.BaseDirectory;
     private readonly string _assetDir = BaseDir + "Assets/";
 
@@ -54,19 +55,12 @@ public class HarpyRenderer(GlContext gl)
         shader.Use();
         
         var program = shader.Handle;
+        gl.Api.Uniform1(gl.Api.GetUniformLocation(program, "uGlobalTime"), (float)_totalTime);
         gl.Api.Uniform1(gl.Api.GetUniformLocation(program, "uTime"), (float)_totalTime);
-        
-        var radius = 0.5f;
-        for (var i = 0; i < 5; i++)
-        {
-            var angle = i * 2f * (float)Math.PI / 5f;
-            var x = (float)Math.Cos(angle) * radius;
-            var y = (float)Math.Sin(angle) * radius;
-            var loc = gl.Api.GetUniformLocation(program, $"uOffsets[{i}]");
-            gl.Api.Uniform2(loc, x, y);
-        }
-        
-        _triangleMesh.DrawInstanced(5);
+        gl.Api.Uniform1(gl.Api.GetUniformLocation(program, "uInstanceCount"), Math.Max(0, TriangleInstanceCount));
+        gl.Api.Uniform1(gl.Api.GetUniformLocation(program, "uRadius"), 0.5f);
+
+        _triangleMesh.DrawInstanced(Math.Max(0, TriangleInstanceCount));
         gl.Api.PolygonMode(GLEnum.FrontAndBack, GLEnum.Fill);
     }
 }

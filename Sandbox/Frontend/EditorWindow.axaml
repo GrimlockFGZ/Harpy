@@ -1,10 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:editor="clr-namespace:HarpyEngine.Sandbox.Editor"
-        xmlns:global="clr-namespace:"
-        xmlns:helpers="clr-namespace:HarpyEngine.Sandbox.Helpers"
-        xmlns:mnemosyne="clr-namespace:HarpyEngine.Resources.Mnemosyne;assembly=Engine.Resources"
-        xmlns:resources="clr-namespace:HarpyEngine.Resources;assembly=Engine.Resources"
         x:Class="HarpyEngine.Sandbox.Editor.EditorWindow"
         x:DataType="editor:EditorWindow"
         x:CompileBindings ="True"
@@ -16,37 +12,15 @@
         
         <GridSplitter Grid.Row="0" Grid.Column="1" Grid.RowSpan="3" Background="Black"/>
 
-        <editor:HarpyViewport Grid.Row="0" Grid.Column="2" />
+        <editor:HarpyViewport x:Name="ViewportPanel" Grid.Row="0" Grid.Column="2" />
         
         <GridSplitter Grid.Row="1" Grid.Column="2" Background="Black" ResizeDirection="Rows"/>
         
-        <ListBox Grid.Row="2" Grid.Column="2" 
-                 ItemsSource="{Binding UiAssets}" 
-                 Background="#2d2d2d">
-            <ListBox.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel />
-                </ItemsPanelTemplate>
-            </ListBox.ItemsPanel>
-            <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="resources:AssetInfo">
-                    <StackPanel Width="90" Margin="5">
-                        <Border Height="60" 
-                                Background="{Binding Type, Converter={x:Static helpers:TypeToBrushConverter.Instance}}" 
-                                CornerRadius="4" />
-                        <TextBlock Text="{Binding RelativePath, Converter={x:Static helpers:PathToNameConverter.Instance}}" 
-                                   FontSize="10" Foreground="White" HorizontalAlignment="Center" 
-                                   TextAlignment="Center" TextWrapping="Wrap"/>
-                    </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
-
+        <editor:ContentBrowser Grid.Row="2" Grid.Column="2" 
+                               ItemsSource="{Binding $parent[editor:EditorWindow].UiAssets}" />
         <GridSplitter Grid.Row="0" Grid.Column="3" Grid.RowSpan="3" Background="Black"/>
         
-        <Border Grid.Row="0" Grid.Column="4" Grid.RowSpan="3" Background="#2d2d2d">
-            <TextBlock Text="Inspector" Margin="10" Foreground="White"/>
-        </Border>
+        <editor:Inspector x:Name="InspectorPanel" Grid.Row="0" Grid.Column="4" Grid.RowSpan="3" Background="#2d2d2d"/>
         
     </Grid>
 </Window>

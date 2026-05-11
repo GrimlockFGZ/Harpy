@@ -108,4 +108,37 @@ public sealed class Registry
     /// </summary>
     public Span<T> ViewData<T>() where T : struct
         => Pool<T>().DenseData;
+
+    /// <summary>
+    /// Returns all alive entities that have both component types.
+    /// </summary>
+    public IEnumerable<Entity> View<T1, T2>()
+        where T1 : struct
+        where T2 : struct
+    {
+        foreach (var entity in _entities)
+        {
+            if (Pool<T1>().Has(entity) && Pool<T2>().Has(entity))
+                yield return entity;
+        }
+    }
+
+    /// <summary>
+    /// Returns all alive entities that have all three component types.
+    /// </summary>
+    public IEnumerable<Entity> View<T1, T2, T3>()
+        where T1 : struct
+        where T2 : struct
+        where T3 : struct
+    {
+        foreach (var entity in _entities)
+        {
+            if (Pool<T1>().Has(entity) &&
+                Pool<T2>().Has(entity) &&
+                Pool<T3>().Has(entity))
+            {
+                yield return entity;
+            }
+        }
+    }
 }
