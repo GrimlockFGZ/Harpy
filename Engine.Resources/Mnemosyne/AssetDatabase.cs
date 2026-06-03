@@ -5,6 +5,11 @@ using System.Runtime.InteropServices;
 
 namespace HarpyEngine.Resources.Mnemosyne;
 
+using Engine.Core;
+
+public record struct AssetUpdated(AssetInfo Info) : IEvent;
+public record struct AssetRemoved(string RelativePath) : IEvent;
+
 public class AssetDatabase
 {
 
@@ -31,9 +36,6 @@ public class AssetDatabase
     private readonly Dictionary<string, AssetInfo> _assets = new(2048, StringComparer.OrdinalIgnoreCase);
     private string _root = "";
 
-    public event Action<AssetInfo>? AssetUpdated;
-    public event Action<string>? AssetRemoved;
-
     public void Init(string rootPath)
     {
         _root = rootPath;
@@ -56,7 +58,7 @@ public class AssetDatabase
         var relative = Path.GetRelativePath(_root, absolutePath);
         if (_assets.Remove(relative))
         {
-            AssetRemoved?.Invoke(relative);
+            Event<AssetRemoved>.Invoke(new AssetRemoved(relative));
         }
     }
 
@@ -82,7 +84,7 @@ public class AssetDatabase
             var info = new AssetInfo(relative, absolutePath, type, File.GetLastWriteTime(absolutePath));
             _assets[relative] = info;
             _dirtyFiles.Enqueue(absolutePath);
-            AssetUpdated?.Invoke(info);
+            Event<AssetUpdated>.Invoke(new AssetUpdated(info));
         }
     }
     

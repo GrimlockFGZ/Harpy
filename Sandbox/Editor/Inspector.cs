@@ -6,6 +6,7 @@ namespace HarpyEngine.Sandbox.Editor;
 
 public partial class Inspector : UserControl
 {
+    // Safely casts the DataContext to our ViewModel
     public InspectorViewModel ViewModel => (InspectorViewModel)DataContext!;
 
     public Inspector()

@@ -53,7 +53,7 @@
             <Grid ColumnDefinitions="60, *" Margin="0,4,0,0">
                 <TextBlock Grid.Column="0" Text="Name" Classes="Label"/>
                 <TextBox Grid.Column="1" 
-                         Text="{Binding SelectedEntityName}" 
+                         Text="{Binding SelectedEntityName, UpdateSourceTrigger=PropertyChanged}" 
                          FontSize="11"
                          Background="#151515"
                          BorderBrush="#333"
@@ -77,17 +77,17 @@
                         <StackPanel Spacing="8">
                             <Grid ColumnDefinitions="60, *, *, *">
                                 <TextBlock Grid.Column="0" Text="Position" Classes="Label"/>
-                                <TextBox Grid.Column="1" Classes="VectorInput" Text="{Binding PositionX}" Margin="0,0,4,0">
+                                <TextBox Grid.Column="1" Classes="VectorInput" Text="{Binding PositionX, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,4,0">
                                     <TextBox.InnerLeftContent>
                                         <TextBlock Text="X" Classes="Prefix" Foreground="#FF5555"/>
                                     </TextBox.InnerLeftContent>
                                 </TextBox>
-                                <TextBox Grid.Column="2" Classes="VectorInput" Text="{Binding PositionY}" Margin="0,0,4,0">
+                                <TextBox Grid.Column="2" Classes="VectorInput" Text="{Binding PositionY, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,4,0">
                                     <TextBox.InnerLeftContent>
                                         <TextBlock Text="Y" Classes="Prefix" Foreground="#55FF55"/>
                                     </TextBox.InnerLeftContent>
                                 </TextBox>
-                                <TextBox Grid.Column="3" Classes="VectorInput" Text="{Binding PositionZ}">
+                                <TextBox Grid.Column="3" Classes="VectorInput" Text="{Binding PositionZ, UpdateSourceTrigger=PropertyChanged}">
                                     <TextBox.InnerLeftContent>
                                         <TextBlock Text="Z" Classes="Prefix" Foreground="#5555FF"/>
                                     </TextBox.InnerLeftContent>
@@ -96,17 +96,17 @@
 
                             <Grid ColumnDefinitions="60, *, *, *">
                                 <TextBlock Grid.Column="0" Text="Scale" Classes="Label"/>
-                                <TextBox Grid.Column="1" Classes="VectorInput" Text="{Binding ScaleX}" Margin="0,0,4,0">
+                                <TextBox Grid.Column="1" Classes="VectorInput" Text="{Binding ScaleX, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,4,0">
                                     <TextBox.InnerLeftContent>
                                         <TextBlock Text="X" Classes="Prefix"/>
                                     </TextBox.InnerLeftContent>
                                 </TextBox>
-                                <TextBox Grid.Column="2" Classes="VectorInput" Text="{Binding ScaleY}" Margin="0,0,4,0">
+                                <TextBox Grid.Column="2" Classes="VectorInput" Text="{Binding ScaleY, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,4,0">
                                     <TextBox.InnerLeftContent>
                                         <TextBlock Text="Y" Classes="Prefix"/>
                                     </TextBox.InnerLeftContent>
                                 </TextBox>
-                                <TextBox Grid.Column="3" Classes="VectorInput" Text="{Binding ScaleZ}">
+                                <TextBox Grid.Column="3" Classes="VectorInput" Text="{Binding ScaleZ, UpdateSourceTrigger=PropertyChanged}">
                                     <TextBox.InnerLeftContent>
                                         <TextBlock Text="Z" Classes="Prefix"/>
                                     </TextBox.InnerLeftContent>

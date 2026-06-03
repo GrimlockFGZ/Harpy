@@ -1,10 +1,7 @@
-public interface IEvent{}
+public interface IEvent;
 
-/// <summary>
-///  Static event bus for all events in the engine, exposed to sandbox so user can use it too
-///  requires event data to be flagged with the
-///  <see cref="IEvent"/> IEvent interface
-/// </summary>
+public record struct EntityCreated(Engine.Core.Entity Entity) : IEvent;
+public record struct EntityDestroyed(Engine.Core.Entity Entity) : IEvent;
 
 public static class Event<T> where T : IEvent
 {
@@ -13,7 +10,8 @@ public static class Event<T> where T : IEvent
     public static IDisposable Subscribe(Action<T> handler)
     {
         _action += handler;
-        return new Subscription(() => _action -= handler);
+        
+        return new Subscription(handler);
     }
 
     public static void Invoke(T args)
@@ -21,19 +19,24 @@ public static class Event<T> where T : IEvent
         _action?.Invoke(args);
     }
 
+    /// <summary>
+    /// Statically typed generic subscription that directly targets the parent's event state.
+    /// </summary>
     private sealed class Subscription : IDisposable
     {
-        private Action _unsubscribe;
+        private Action<T>? _handler;
 
-        public Subscription(Action unsubscribe)
+        public Subscription(Action<T> handler)
         {
-            _unsubscribe = unsubscribe;
+            _handler = handler;
         }
 
         public void Dispose()
         {
-            _unsubscribe.Invoke();
-            _unsubscribe = null;
+            var handlerToTarget = Interlocked.Exchange(ref _handler, null);
+            if (handlerToTarget is null) return;
+
+            _action -= handlerToTarget;
         }
     }
 }

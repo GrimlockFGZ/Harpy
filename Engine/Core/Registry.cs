@@ -31,14 +31,11 @@ public sealed class Registry
 
     public IEnumerable<Entity> GetAllEntities() => _entities;
 
-    public event Action<Entity>? EntityCreated;
-    public event Action<Entity>? EntityDestroyed;
-
     public Entity CreateEntity()
     {
         var entity = new Entity(_entityCount++);
         _entities.Add(entity);
-        EntityCreated?.Invoke(entity);
+        Event<EntityCreated>.Invoke(new EntityCreated(entity));
         return entity;
     }
 
@@ -51,7 +48,7 @@ public sealed class Registry
             pool.Remove(entity);
         }
 
-        EntityDestroyed?.Invoke(entity);
+        Event<EntityDestroyed>.Invoke(new EntityDestroyed(entity));
     }
 
     private void EnsureAlive(Entity entity)

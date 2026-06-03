@@ -1,127 +1,41 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Engine;
-using HarpyEngine.Sandbox.Editor.Models;
 
 namespace HarpyEngine.Sandbox.Editor.Models;
 
+// ============================================================================
+// Global Event Bus Messages
+// ============================================================================
+public record PropertyChangedEvent(object Sender, string PropertyName) : IEvent;
+public record ApplyRequestedEvent(HierarchyEntry Entry) : IEvent;
+public record AddTransformRequestedEvent(HierarchyEntry Entry) : IEvent;
+public record RemoveTransformRequestedEvent(HierarchyEntry Entry) : IEvent;
+
+// ============================================================================
+// Inspector View Model
+// ============================================================================
 public sealed class InspectorViewModel : INotifyPropertyChanged
 {
     private HierarchyEntry? _selectedEntry;
-    private string _selectedEntityName = "No entity selected";
-    private string _positionX = "0";
-    private string _positionY = "0";
-    private string _positionZ = "0";
-    private string _scaleX = "1";
-    private string _scaleY = "1";
-    private string _scaleZ = "1";
-    private bool _hasTransform;
-    private string _status = "-";
-
-    public string SelectedEntityName
-    {
-        get => _selectedEntityName;
-        set
-        {
-            if (_selectedEntityName == value) return;
-            _selectedEntityName = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string PositionX
-    {
-        get => _positionX;
-        set
-        {
-            if (_positionX == value) return;
-            _positionX = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string PositionY
-    {
-        get => _positionY;
-        set
-        {
-            if (_positionY == value) return;
-            _positionY = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string PositionZ
-    {
-        get => _positionZ;
-        set
-        {
-            if (_positionZ == value) return;
-            _positionZ = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string ScaleX
-    {
-        get => _scaleX;
-        set
-        {
-            if (_scaleX == value) return;
-            _scaleX = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string ScaleY
-    {
-        get => _scaleY;
-        set
-        {
-            if (_scaleY == value) return;
-            _scaleY = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string ScaleZ
-    {
-        get => _scaleZ;
-        set
-        {
-            if (_scaleZ == value) return;
-            _scaleZ = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public bool HasTransform
-    {
-        get => _hasTransform;
-        private set
-        {
-            if (_hasTransform == value) return;
-            _hasTransform = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string Status
-    {
-        get => _status;
-        private set
-        {
-            if (_status == value) return;
-            _status = value;
-            OnPropertyChanged();
-        }
-    }
-
     public event PropertyChangedEventHandler? PropertyChanged;
-    public event Action<HierarchyEntry>? ApplyRequested;
-    public event Action<HierarchyEntry>? AddTransformRequested;
-    public event Action<HierarchyEntry>? RemoveTransformRequested;
 
+    // ------------------------------------------------------------------------
+    // Properties (Using Streamlined Field-Backed Property Syntaxes)
+    // ------------------------------------------------------------------------
+    public string SelectedEntityName { get => field; set => Set(ref field, value); } = "No entity selected";
+    public string PositionX          { get => field; set => Set(ref field, value); } = "0";
+    public string PositionY          { get => field; set => Set(ref field, value); } = "0";
+    public string PositionZ          { get => field; set => Set(ref field, value); } = "0";
+    public string ScaleX             { get => field; set => Set(ref field, value); } = "1";
+    public string ScaleY             { get => field; set => Set(ref field, value); } = "1";
+    public string ScaleZ             { get => field; set => Set(ref field, value); } = "1";
+    public bool HasTransform         { get => field; private set => Set(ref field, value); }
+    public string Status             { get => field; private set => Set(ref field, value); } = "-";
+
+    // ------------------------------------------------------------------------
+    // Public Operations / Methods
+    // ------------------------------------------------------------------------
     public void SetSelection(HierarchyEntry entry, bool hasTransform, Transform? transform)
     {
         _selectedEntry = entry;
@@ -179,19 +93,19 @@ public sealed class InspectorViewModel : INotifyPropertyChanged
     public void ApplyChanges()
     {
         if (_selectedEntry is null) return;
-        ApplyRequested?.Invoke(_selectedEntry);
+        Event<ApplyRequestedEvent>.Invoke(new(_selectedEntry));
     }
 
     public void AddTransform()
     {
         if (_selectedEntry is null) return;
-        AddTransformRequested?.Invoke(_selectedEntry);
+        Event<AddTransformRequestedEvent>.Invoke(new(_selectedEntry));
     }
 
     public void RemoveTransform()
     {
         if (_selectedEntry is null) return;
-        RemoveTransformRequested?.Invoke(_selectedEntry);
+        Event<RemoveTransformRequestedEvent>.Invoke(new(_selectedEntry));
     }
 
     public void SetStatus(string message)
@@ -199,8 +113,26 @@ public sealed class InspectorViewModel : INotifyPropertyChanged
         Status = message;
     }
 
+    // ------------------------------------------------------------------------
+    // Private Helpers & Event Dispatching
+    // ------------------------------------------------------------------------
+    private bool Set<T>(ref T fieldLocation, T value, [CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(fieldLocation, value)) return false;
+
+        fieldLocation = value;
+        OnPropertyChanged(propertyName);
+        return true;
+    }
+
     private void OnPropertyChanged([CallerMemberName] string? memberName = null)
     {
+        if (memberName is null) return;
+
+        // 1. Alert local UI Data-Binding frameworks
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(memberName));
+
+        // 2. Alert engine architectural layers globally via static event channels
+        Event<PropertyChangedEvent>.Invoke(new PropertyChangedEvent(this, memberName));
     }
 }

@@ -1,4 +1,8 @@
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Engine;
@@ -16,6 +20,8 @@ namespace HarpyEngine.Sandbox.Editor
         private readonly Dictionary<string, AssetInfo> _assetCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly HierarchyViewModel _hierarchyViewModel = new();
         private readonly InspectorViewModel _inspectorViewModel = new();
+        
+        private readonly List<IDisposable> _busSubscriptions = new();
 
         public ObservableCollection<AssetInfo> UiAssets { get; } = new();
 
@@ -26,20 +32,26 @@ namespace HarpyEngine.Sandbox.Editor
             DataContext = this;
 
             Title = "Harpy Engine";
-            WindowState = WindowState.FullScreen;
+            WindowState = WindowState.Maximized;
+            Width = 1920;
+            Height = 1080;
             
             var assetUri = new Uri("avares://Sandbox/Assets/Favicon.ico");
             Icon = new WindowIcon(Avalonia.Platform.AssetLoader.Open(assetUri));
-            
-         
 
             _hierarchyViewModel.SetRegistry(_registry);
-            _hierarchyViewModel.SelectedEntryChanged += OnHierarchySelectionChanged;
-            _inspectorViewModel.ApplyRequested += OnApplyRequested;
-            _inspectorViewModel.AddTransformRequested += OnAddTransformRequested;
-            _inspectorViewModel.RemoveTransformRequested += OnRemoveTransformRequested;
-            _registry.EntityCreated += _ => UpdateViewportTriangleCount();
-            _registry.EntityDestroyed += _ => UpdateViewportTriangleCount();
+            
+            // ========================================================================
+            // Event Bus Subscriptions (Replaced old manual event handlers)
+            // ========================================================================
+            _busSubscriptions.Add(Event<SelectionChanged>.Subscribe(evt => OnHierarchySelectionChanged(evt.Entry)));
+            _busSubscriptions.Add(Event<ApplyRequestedEvent>.Subscribe(evt => OnApplyRequested(evt.Entry)));
+            _busSubscriptions.Add(Event<AddTransformRequestedEvent>.Subscribe(evt => OnAddTransformRequested(evt.Entry)));
+            _busSubscriptions.Add(Event<RemoveTransformRequestedEvent>.Subscribe(evt => OnRemoveTransformRequested(evt.Entry)));
+            _busSubscriptions.Add(Event<EntityCreated>.Subscribe(_ => UpdateViewportTriangleCount()));
+            _busSubscriptions.Add(Event<EntityDestroyed>.Subscribe(_ => UpdateViewportTriangleCount()));
+            _busSubscriptions.Add(Event<AssetUpdated>.Subscribe(evt => OnAssetUpdated(evt.Info)));
+            _busSubscriptions.Add(Event<AssetRemoved>.Subscribe(evt => OnAssetRemoved(evt.RelativePath)));
 
             HierarchyPanel.DataContext = _hierarchyViewModel;
             InspectorPanel.DataContext = _inspectorViewModel;
@@ -48,10 +60,6 @@ namespace HarpyEngine.Sandbox.Editor
 
             _db = new AssetDatabase();
             var assetPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
-            
-            _db.AssetUpdated += OnAssetUpdated;
-            _db.AssetRemoved += OnAssetRemoved;
-
             _db.Init(assetPath);
 
             foreach (var asset in _db.GetAllAssets())
@@ -174,6 +182,20 @@ namespace HarpyEngine.Sandbox.Editor
                     UiAssets.Remove(existing);
                 }
             });
+        }
+
+        /// <summary>
+        /// Overriding the Window close lifecycle event to clean up our event bus static links.
+        /// </summary>
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+            
+            foreach (var subscription in _busSubscriptions)
+            {
+                subscription.Dispose();
+            }
+            _busSubscriptions.Clear();
         }
     }
 }

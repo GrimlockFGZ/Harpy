@@ -1,4 +1,5 @@
 using System.Drawing;
+using Engine.Core;
 using HarpyEngine.Resources.Mnemosyne;
 using Silk.NET.OpenGL;
 
@@ -8,6 +9,7 @@ public class HarpyRenderer(GlContext gl)
 {
     private Mesh _triangleMesh = null!;
     private double _totalTime;
+    private readonly List<IDisposable> _subscriptions = new();
     public int TriangleInstanceCount { get; set; }
     private static readonly string BaseDir = AppDomain.CurrentDomain.BaseDirectory;
     private readonly string _assetDir = BaseDir + "Assets/";
@@ -19,7 +21,7 @@ public class HarpyRenderer(GlContext gl)
         ResourceManager.Init(assetDb);
         
         ResourceManager.OnShaderRequest += (v, f) => new Shader(gl, v, f);
-        ResourceManager.OnReloadRequest += (obj) => { if (obj is Shader s) s.Reload(); };
+        _subscriptions.Add(Event<ReloadRequested>.Subscribe(evt => { if (evt.Resource is Shader s) s.Reload(); }));
         
         var vPath = Path.Combine(_assetDir, "vertex.glsl"); 
         var fPath = Path.Combine(_assetDir, "fragment.glsl");

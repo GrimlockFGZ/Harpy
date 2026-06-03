@@ -6,10 +6,13 @@ using Engine.Core;
 
 namespace HarpyEngine.Sandbox.Editor.Models
 {
+    public record struct SelectionChanged(HierarchyEntry? Entry) : IEvent;
+
     public class HierarchyViewModel : INotifyPropertyChanged
     {
         private Registry? _registry;
         private HierarchyEntry? _selectedEntry;
+        private readonly List<IDisposable> _subscriptions = [];
 
         public ObservableCollection<HierarchyEntry> Entries { get; } = [];
 
@@ -21,12 +24,11 @@ namespace HarpyEngine.Sandbox.Editor.Models
                 if (_selectedEntry == value) return;
                 _selectedEntry = value;
                 OnPropertyChanged();
-                SelectedEntryChanged?.Invoke(value);
+                Event<SelectionChanged>.Invoke(new SelectionChanged(value));
             }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
-        public event Action<HierarchyEntry?>? SelectedEntryChanged;
         
         public HierarchyViewModel()
         {
@@ -34,19 +36,19 @@ namespace HarpyEngine.Sandbox.Editor.Models
 
         public void SetRegistry(Registry registry)
         {
-            if (_registry != null)
+            foreach (var subscription in _subscriptions)
             {
-                _registry.EntityCreated -= OnEntityCreated;
-                _registry.EntityDestroyed -= OnEntityDestroyed;
+                subscription.Dispose();
             }
+            _subscriptions.Clear();
 
             _registry = registry;
             Entries.Clear();
 
             if (_registry != null)
             {
-                _registry.EntityCreated += OnEntityCreated;
-                _registry.EntityDestroyed += OnEntityDestroyed;
+                _subscriptions.Add(Event<EntityCreated>.Subscribe(OnEntityCreated));
+                _subscriptions.Add(Event<EntityDestroyed>.Subscribe(OnEntityDestroyed));
 
                 foreach (var entity in _registry.GetAllEntities())
                 {
@@ -55,19 +57,19 @@ namespace HarpyEngine.Sandbox.Editor.Models
             }
         }
 
-        private void OnEntityCreated(Entity entity)
+        private void OnEntityCreated(EntityCreated @event)
         {
             Dispatcher.UIThread.Post(() =>
             {
-                Entries.Add(HierarchyEntry.FromEntity(entity));
+                Entries.Add(HierarchyEntry.FromEntity(@event.Entity));
             });
         }
 
-        private void OnEntityDestroyed(Entity entity)
+        private void OnEntityDestroyed(EntityDestroyed @event)
         {
             Dispatcher.UIThread.Post(() =>
             {
-                var entry = Entries.FirstOrDefault(e => e.Entity == entity);
+                var entry = Entries.FirstOrDefault(e => e.Entity == @event.Entity);
                 if (entry is null) return;
 
                 var removedSelected = SelectedEntry == entry;
