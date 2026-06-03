@@ -1,18 +1,22 @@
 ## --- .NET / Visual Studio / Rider ---
-bin/
-obj/
 [Bb]in/
 [Oo]bj/
+[Rr]elease/
+[Xx]64/
+[Xx]86/
+[Aa]rm/
+[Aa]rm64/
 /packages/
 TestResults/
 *.suo
 *.user
 *.userosscache
 *.sln.docstates
+*.userprefs
+*.sln.DotSettings.user
 
 ## --- JetBrains Rider ---
 .idea/
-*.sln.DotSettings.user
 _ReSharper.Caches/
 riderModule.iml
 
@@ -22,18 +26,26 @@ riderModule.iml
 *.tmp
 publish/
 *.publish.xml
+*.nupkg
+*.snupkg
 
 ## --- Operating System ---
 .DS_Store
 Thumbs.db
+desktop.ini
 
 ## --- Crash Dumps & Debugging ---
 *.pdb
 *.vshost.exe
 *.vshost.exe.config
 *.vshost.exe.manifest
+*.stackdump
 
 ## --- Tooling ---
 .vs/
 .history/
 .ionide/
+.vscode/
+.env
+.env.*
+!.env.example
