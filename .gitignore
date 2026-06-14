@@ -48,4 +48,5 @@ desktop.ini
 .vscode/
 .env
 .env.*
+/local-ci-artifacts/
 !.env.example
