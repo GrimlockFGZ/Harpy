@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Engine;
@@ -17,33 +12,27 @@ namespace HarpyEngine.Sandbox.Editor
     {
         private readonly AssetDatabase _db;
         private readonly Registry _registry = new();
-        private readonly Dictionary<string, AssetInfo> _assetCache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _assetIndexCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly HierarchyViewModel _hierarchyViewModel = new();
         private readonly InspectorViewModel _inspectorViewModel = new();
-        
         private readonly List<IDisposable> _busSubscriptions = new();
-
-        public ObservableCollection<AssetInfo> UiAssets { get; } = new();
 
         public EditorWindow()
         {
             InitializeComponent();
-            
+
             DataContext = this;
 
             Title = "Harpy Engine";
             WindowState = WindowState.Maximized;
             Width = 1920;
             Height = 1080;
-            
+
             var assetUri = new Uri("avares://Sandbox/Assets/Favicon.ico");
             Icon = new WindowIcon(Avalonia.Platform.AssetLoader.Open(assetUri));
 
             _hierarchyViewModel.SetRegistry(_registry);
-            
-            // ========================================================================
-            // Event Bus Subscriptions (Replaced old manual event handlers)
-            // ========================================================================
+
             _busSubscriptions.Add(Event<SelectionChanged>.Subscribe(evt => OnHierarchySelectionChanged(evt.Entry)));
             _busSubscriptions.Add(Event<ApplyRequestedEvent>.Subscribe(evt => OnApplyRequested(evt.Entry)));
             _busSubscriptions.Add(Event<AddTransformRequestedEvent>.Subscribe(evt => OnAddTransformRequested(evt.Entry)));
@@ -62,10 +51,11 @@ namespace HarpyEngine.Sandbox.Editor
             var assetPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
             _db.Init(assetPath);
 
+            // Populate content browser from initial scan
             foreach (var asset in _db.GetAllAssets())
             {
-                UiAssets.Add(asset);
-                _assetCache[asset.RelativePath] = asset;
+                _assetIndexCache[asset.RelativePath] = ContentBrowserPanel.Assets.Count;
+                ContentBrowserPanel.Assets.Add(asset);
             }
         }
 
@@ -158,17 +148,16 @@ namespace HarpyEngine.Sandbox.Editor
         {
             Dispatcher.UIThread.Post(() =>
             {
-                if (_assetCache.TryGetValue(info.RelativePath, out var existing))
+                if (_assetIndexCache.TryGetValue(info.RelativePath, out var index))
                 {
-                    var index = UiAssets.IndexOf(existing);
-                    if (index == -1) return;
-                    UiAssets[index] = info;
-                    _assetCache[info.RelativePath] = info;
+                    // Update in place using the cached index
+                    ContentBrowserPanel.Assets[index] = info;
                 }
                 else
                 {
-                    UiAssets.Add(info);
-                    _assetCache[info.RelativePath] = info;
+                    // New asset — append and cache its index
+                    _assetIndexCache[info.RelativePath] = ContentBrowserPanel.Assets.Count;
+                    ContentBrowserPanel.Assets.Add(info);
                 }
             });
         }
@@ -177,24 +166,27 @@ namespace HarpyEngine.Sandbox.Editor
         {
             Dispatcher.UIThread.Post(() =>
             {
-                if (_assetCache.Remove(relativePath, out var existing))
+                if (!_assetIndexCache.TryGetValue(relativePath, out var index)) return;
+
+                ContentBrowserPanel.Assets.RemoveAt(index);
+                _assetIndexCache.Remove(relativePath);
+
+                // Shift all cached indices that were above the removed item
+                foreach (var key in _assetIndexCache.Keys.ToList())
                 {
-                    UiAssets.Remove(existing);
+                    if (_assetIndexCache[key] > index)
+                        _assetIndexCache[key]--;
                 }
             });
         }
 
-        /// <summary>
-        /// Overriding the Window close lifecycle event to clean up our event bus static links.
-        /// </summary>
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
-            
+
             foreach (var subscription in _busSubscriptions)
-            {
                 subscription.Dispose();
-            }
+
             _busSubscriptions.Clear();
         }
     }

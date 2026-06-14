@@ -11,28 +11,23 @@ namespace HarpyEngine.Sandbox.Editor.Models
     public class HierarchyViewModel : INotifyPropertyChanged
     {
         private Registry? _registry;
-        private HierarchyEntry? _selectedEntry;
         private readonly List<IDisposable> _subscriptions = [];
 
         public ObservableCollection<HierarchyEntry> Entries { get; } = [];
 
         public HierarchyEntry? SelectedEntry
         {
-            get => _selectedEntry;
+            get;
             set
             {
-                if (_selectedEntry == value) return;
-                _selectedEntry = value;
+                if (field == value) return;
+                field = value;
                 OnPropertyChanged();
                 Event<SelectionChanged>.Invoke(new SelectionChanged(value));
             }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
-        
-        public HierarchyViewModel()
-        {
-        }
 
         public void SetRegistry(Registry registry)
         {
@@ -45,15 +40,13 @@ namespace HarpyEngine.Sandbox.Editor.Models
             _registry = registry;
             Entries.Clear();
 
-            if (_registry != null)
-            {
-                _subscriptions.Add(Event<EntityCreated>.Subscribe(OnEntityCreated));
-                _subscriptions.Add(Event<EntityDestroyed>.Subscribe(OnEntityDestroyed));
+            if (_registry == null) return;
+            _subscriptions.Add(Event<EntityCreated>.Subscribe(OnEntityCreated));
+            _subscriptions.Add(Event<EntityDestroyed>.Subscribe(OnEntityDestroyed));
 
-                foreach (var entity in _registry.GetAllEntities())
-                {
-                    Entries.Add(HierarchyEntry.FromEntity(entity));
-                }
+            foreach (var entity in _registry.GetAllEntities())
+            {
+                Entries.Add(HierarchyEntry.FromEntity(entity));
             }
         }
 

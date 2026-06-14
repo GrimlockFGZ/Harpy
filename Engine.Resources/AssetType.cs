@@ -2,5 +2,5 @@ namespace HarpyEngine.Resources;
 
 public enum AssetType
 {
-    Shader, Texture, Script, Model, Animation, Material, Unknown
+    Shader, Texture, Script, Model, Animation, Material,Mesh,Audio,Scene, Unknown
 }

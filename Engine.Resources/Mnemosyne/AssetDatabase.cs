@@ -78,14 +78,12 @@ public class AssetDatabase
     {
         var relative = Path.GetRelativePath(_root, absolutePath);
         var ext = Path.GetExtension(absolutePath.AsSpan());
-        
-        if (TryGetAssetType(ext, out var type))
-        {
-            var info = new AssetInfo(relative, absolutePath, type, File.GetLastWriteTime(absolutePath));
-            _assets[relative] = info;
-            _dirtyFiles.Enqueue(absolutePath);
-            Event<AssetUpdated>.Invoke(new AssetUpdated(info));
-        }
+
+        if (!TryGetAssetType(ext, out var type)) return;
+        var info = new AssetInfo(relative, absolutePath, type, File.GetLastWriteTime(absolutePath));
+        _assets[relative] = info;
+        _dirtyFiles.Enqueue(absolutePath);
+        Event<AssetUpdated>.Invoke(new AssetUpdated(info));
     }
     
     private static bool TryGetAssetType(ReadOnlySpan<char> extension, out AssetType type)

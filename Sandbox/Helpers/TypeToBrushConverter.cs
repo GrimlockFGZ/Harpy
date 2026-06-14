@@ -8,8 +8,6 @@ namespace HarpyEngine.Sandbox.Helpers;
 
 public class TypeToBrushConverter : IValueConverter
 {
-    public TypeToBrushConverter() { }
-
     public static readonly TypeToBrushConverter Instance = new();
 
     private static readonly Dictionary<AssetType, IBrush> BrushMap = new()

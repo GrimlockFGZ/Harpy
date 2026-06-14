@@ -6,19 +6,20 @@ namespace HarpyEngine.Sandbox.Editor.Models;
 
 public sealed class HierarchyEntry : INotifyPropertyChanged
 {
-    public Entity Entity { get; init; }
-    private string _name = string.Empty;
+    public Entity Entity { get; private init; }
+    public string Tag { get; set; } = "Empty";
+
 
     public string Name
     {
-        get => _name;
+        get;
         set
         {
-            if (_name == value) return;
-            _name = value;
+            if (field == value) return;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = string.Empty;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

@@ -6,96 +6,186 @@
              x:CompileBindings="True">
 
     <UserControl.Styles>
-        <!-- Matching Inspector Label Styles -->
+
+        <!-- Section label -->
+        <Style Selector="TextBlock.PanelLabel">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#444444"/>
+            <Setter Property="LetterSpacing" Value="1.5"/>
+        </Style>
+
+        <!-- Muted field labels -->
         <Style Selector="TextBlock.Label">
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Foreground" Value="#909090"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Foreground" Value="#555555"/>
         </Style>
 
-        <!-- Tool Buttons matching Inspector buttons -->
-        <Style Selector="Button, DropDownButton">
+        <!-- Toolbar buttons -->
+        <Style Selector="Button">
             <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Background" Value="#333"/>
-            <Setter Property="Padding" Value="8,4"/>
-        </Style>
-
-        <!-- ListBox Modernization -->
-        <Style Selector="ListBox">
-            <Setter Property="Background" Value="#151515"/>
+            <Setter Property="Background" Value="#1e1e1e"/>
+            <Setter Property="Foreground" Value="#999999"/>
+            <Setter Property="BorderBrush" Value="#2e2e2e"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#333"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+        <Style Selector="Button:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#2a2a2a"/>
+        </Style>
+
+        <!-- Add Entity dropdown button -->
+        <Style Selector="DropDownButton">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Background" Value="#1e1640"/>
+            <Setter Property="Foreground" Value="#a48bff"/>
+            <Setter Property="BorderBrush" Value="#7c5cfc44"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+        <Style Selector="DropDownButton:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#261e4a"/>
+        </Style>
+
+        <!-- Remove button: danger tint -->
+        <Style Selector="Button.Danger">
+            <Setter Property="Background" Value="#1e1414"/>
+            <Setter Property="Foreground" Value="#ff7070"/>
+            <Setter Property="BorderBrush" Value="#ff555544"/>
+        </Style>
+
+        <!-- ListBox base -->
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0"/>
         </Style>
 
-        <!-- ListBoxItem Selection (Engine-style highlight) -->
+        <!-- ListBoxItem base -->
         <Style Selector="ListBoxItem">
-            <Setter Property="Padding" Value="12,4"/>
+            <Setter Property="Padding" Value="12,5"/>
             <Setter Property="FontSize" Value="11"/>
-            <Setter Property="MinHeight" Value="24"/>
+            <Setter Property="MinHeight" Value="26"/>
+            <Setter Property="Foreground" Value="#999999"/>
+            <Setter Property="BorderThickness" Value="2,0,0,0"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
         </Style>
-        
+        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#1c1c1c"/>
+        </Style>
+
+        <!-- Selected item: purple accent -->
         <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#3d3d3d" />
+            <Setter Property="Background" Value="#1a1630"/>
         </Style>
+        <Style Selector="ListBoxItem:selected">
+            <Setter Property="BorderBrush" Value="#7c5cfc"/>
+            <Setter Property="Foreground" Value="#c4b5ff"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected TextBlock.EntityName">
+            <Setter Property="Foreground" Value="#c4b5ff"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected Border.EntityTag">
+            <Setter Property="Background" Value="#261e4a"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected TextBlock.EntityTagText">
+            <Setter Property="Foreground" Value="#7c5cfc"/>
+        </Style>
+
+        <!-- Entity name text -->
+        <Style Selector="TextBlock.EntityName">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#999999"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Entity type badge -->
+        <Style Selector="Border.EntityTag">
+            <Setter Property="Background" Value="#1e1e1e"/>
+            <Setter Property="CornerRadius" Value="2"/>
+            <Setter Property="Padding" Value="5,1"/>
+        </Style>
+        <Style Selector="TextBlock.EntityTagText">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Foreground" Value="#555555"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <!-- Entity dot indicator -->
+        <Style Selector="Ellipse.EntityDot">
+            <Setter Property="Width" Value="5"/>
+            <Setter Property="Height" Value="5"/>
+            <Setter Property="Fill" Value="#333333"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected Ellipse.EntityDot">
+            <Setter Property="Fill" Value="#7c5cfc"/>
+        </Style>
+
     </UserControl.Styles>
 
-    <Grid RowDefinitions="Auto, Auto, *" Margin="12">
-        
-        <!-- Section Header (Matches Inspector exactly) -->
-        <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,12">
-            <TextBlock Text="HIERARCHY" 
-                       Foreground="#606060" 
-                       FontSize="10" 
-                       FontWeight="Bold" 
-                       LetterSpacing="1"/>
-            <Rectangle Height="1" Fill="#333"/>
-        </StackPanel>
+    <Grid RowDefinitions="Auto, Auto, *">
 
-        <!-- Toolbar (Using the button style from your Inspector) -->
-        <Grid Grid.Row="1" ColumnDefinitions="*, 34" Margin="0,0,0,8">
-            <DropDownButton Grid.Column="0" 
+        <!-- Panel header with purple accent stripe -->
+        <Border Grid.Row="0"
+                Background="#161616"
+                BorderBrush="#1e1e1e"
+                BorderThickness="0,0,0,1"
+                Padding="10,8">
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Rectangle Width="3" Height="12" Fill="#7c5cfc" RadiusX="2" RadiusY="2"/>
+                <TextBlock Classes="PanelLabel" Text="HIERARCHY"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Toolbar -->
+        <Grid Grid.Row="1"
+              ColumnDefinitions="*, 30"
+              Margin="8,6,8,6">
+            <DropDownButton Grid.Column="0"
                             Content="+ Add Entity"
-                            HorizontalAlignment="Stretch" 
+                            HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Center">
                 <DropDownButton.Flyout>
                     <MenuFlyout Placement="BottomEdgeAlignedLeft">
-                        <MenuItem Header="User" Click="OnAddEntityClick" />
-                        <MenuItem Header="Empty Entity" />
+                        <MenuItem Header="User" Click="OnAddEntityClick"/>
+                        <MenuItem Header="Empty Entity"/>
                     </MenuFlyout>
                 </DropDownButton.Flyout>
             </DropDownButton>
-            <Button Grid.Column="1" 
-                    Content="-" 
-                    Click="OnRemoveEntityClick" 
+            <Button Grid.Column="1"
+                    Classes="Danger"
+                    Content="−"
+                    Click="OnRemoveEntityClick"
                     Margin="4,0,0,0"
-                    HorizontalAlignment="Stretch" 
+                    HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center"/>
         </Grid>
 
-        <!-- Entity List (Wrapped in a Border like Inspector components) -->
-        <Border Grid.Row="2" 
-                Background="#282828" 
-                CornerRadius="3" 
-                BorderBrush="#383838" 
-                BorderThickness="1">
-            <ListBox ItemsSource="{Binding Entries}"
-                     SelectedItem="{Binding SelectedEntry}"
-                     BorderThickness="0"
-                     Background="Transparent">
-                <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="models:HierarchyEntry">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <!-- Optional icon placeholder for engine feel -->
-                            <PathIcon Data="M12,18H6V15H12M18,9V15H12V18H18V21L23,16.5L18,12V15H14V9H18V6L13,1.5L8,6V9H12V13H8V9H2V15H8V13H12V15H14V9H18Z" 
-                                      Width="10" 
-                                      Height="10" 
-                                      Foreground="#606060"/>
-                            <TextBlock Text="{Binding Name}" Foreground="#CFCFCF" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </Border>
+        <!-- Entity list -->
+        <ListBox Grid.Row="2"
+                 ItemsSource="{Binding Entries}"
+                 SelectedItem="{Binding SelectedEntry}">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="models:HierarchyEntry">
+                    <Grid ColumnDefinitions="10, *, Auto">
+                        <Ellipse Grid.Column="0"
+                                 Classes="EntityDot"
+                                 HorizontalAlignment="Left"/>
+                        <TextBlock Grid.Column="1"
+                                   Classes="EntityName"
+                                   Text="{Binding Name}"
+                                   Margin="8,0,0,0"/>
+                        <Border Grid.Column="2" Classes="EntityTag">
+                            <TextBlock Classes="EntityTagText" Text="{Binding Tag}"/>
+                        </Border>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
     </Grid>
 </UserControl>

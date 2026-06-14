@@ -1,23 +1,16 @@
-using Avalonia;
 using Avalonia.Controls;
-using System.Collections;
+using System.Collections.ObjectModel;
+using HarpyEngine.Resources;
 
 namespace HarpyEngine.Sandbox.Editor;
 
 public partial class ContentBrowser : UserControl
 {
-    // Define the property for the data
-    public static readonly StyledProperty<IEnumerable?> ItemsSourceProperty =
-        AvaloniaProperty.Register<ContentBrowser, IEnumerable?>(nameof(ItemsSource));
-
-    public IEnumerable? ItemsSource
-    {
-        get => GetValue(ItemsSourceProperty);
-        set => SetValue(ItemsSourceProperty, value);
-    }
+    public ObservableCollection<AssetInfo> Assets { get; } = new();
 
     public ContentBrowser()
     {
         InitializeComponent();
+        DataContext = this;
     }
 }
