@@ -19,6 +19,7 @@
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="Foreground" Value="#555555"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
         </Style>
         <Style Selector="TextBlock.BreadcrumbSep">
             <Setter Property="FontSize" Value="10"/>
@@ -94,7 +95,8 @@
                 BorderThickness="0,0,0,1"
                 Padding="10,5">
             <Grid ColumnDefinitions="*, Auto">
-                <StackPanel Grid.Column="0"
+                <StackPanel x:Name="BreadcrumbContainer" 
+                            Grid.Column="0"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
                     <TextBlock Classes="BreadcrumbSegment" Text="Assets"/>
@@ -104,7 +106,8 @@
             </Grid>
         </Border>
 
-        <ListBox Grid.Row="2"
+        <ListBox x:Name="AssetListBox" 
+                 Grid.Row="2"
                  ItemsSource="{Binding Assets}">
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>

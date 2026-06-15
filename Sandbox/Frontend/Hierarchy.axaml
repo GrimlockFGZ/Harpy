@@ -36,8 +36,8 @@
             <Setter Property="Background" Value="#2a2a2a"/>
         </Style>
 
-        <!-- Add Entity dropdown button -->
-        <Style Selector="DropDownButton">
+        <!-- Add Entity button: purple accent -->
+        <Style Selector="Button.AddEntity">
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="Background" Value="#1e1640"/>
             <Setter Property="Foreground" Value="#a48bff"/>
@@ -46,7 +46,7 @@
             <Setter Property="Padding" Value="8,3"/>
             <Setter Property="CornerRadius" Value="3"/>
         </Style>
-        <Style Selector="DropDownButton:pointerover /template/ ContentPresenter">
+        <Style Selector="Button.AddEntity:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="#261e4a"/>
         </Style>
 
@@ -145,17 +145,12 @@
         <Grid Grid.Row="1"
               ColumnDefinitions="*, 30"
               Margin="8,6,8,6">
-            <DropDownButton Grid.Column="0"
-                            Content="+ Add Entity"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Center">
-                <DropDownButton.Flyout>
-                    <MenuFlyout Placement="BottomEdgeAlignedLeft">
-                        <MenuItem Header="User" Click="OnAddEntityClick"/>
-                        <MenuItem Header="Empty Entity"/>
-                    </MenuFlyout>
-                </DropDownButton.Flyout>
-            </DropDownButton>
+            <Button Grid.Column="0"
+                    Classes="AddEntity"
+                    Content="+ Add Entity"
+                    Click="OnAddEntityClick"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"/>
             <Button Grid.Column="1"
                     Classes="Danger"
                     Content="−"

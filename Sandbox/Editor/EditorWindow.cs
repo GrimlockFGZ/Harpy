@@ -47,7 +47,7 @@ namespace HarpyEngine.Sandbox.Editor
 
             SeedScene();
 
-            _db = new AssetDatabase();
+            _db = AssetDatabase.Instance;
             var assetPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
             _db.Init(assetPath);
 

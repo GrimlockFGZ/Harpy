@@ -2,16 +2,21 @@ using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.IO.Enumeration;
 using System.Runtime.InteropServices;
+using Engine.Core;
 
 namespace HarpyEngine.Resources.Mnemosyne;
-
-using Engine.Core;
 
 public record struct AssetUpdated(AssetInfo Info) : IEvent;
 public record struct AssetRemoved(string RelativePath) : IEvent;
 
 public class AssetDatabase
 {
+    // --- Singleton Architecture ---
+    private static readonly Lazy<AssetDatabase> _instance = new(() => new AssetDatabase());
+    public static AssetDatabase Instance => _instance.Value;
+
+    // Enforce private constructor to guarantee zero external instantiations
+    private AssetDatabase() { }
 
     private static readonly Dictionary<string, AssetType> ExtensionMap = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -35,22 +40,58 @@ public class AssetDatabase
     private readonly ConcurrentQueue<string> _dirtyFiles = new();
     private readonly Dictionary<string, AssetInfo> _assets = new(2048, StringComparer.OrdinalIgnoreCase);
     private string _root = "";
+    private FileSystemWatcher? _watcher;
 
     public void Init(string rootPath)
     {
-        _root = rootPath;
-        ImportFolder(rootPath); 
+        // 1. Normalize the incoming path format immediately
+        string targetRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath));
+
+        // 2. IDEMPOTENCY GUARD: If already watching an Asset folder, block root-level hijacking attempts.
+        if (_watcher != null)
+        {
+            if (_root.EndsWith("Assets", StringComparison.OrdinalIgnoreCase) && !targetRoot.EndsWith("Assets", StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.LogWarning($"AssetDatabase already initialized on explicit directory context: {_root}. Intercepted and blocked lower-priority root clobber request targeting: {targetRoot}");
+                return;
+            }
+
+            Logger.LogInfo($"Re-routing asset workspace context. Cleaning up old watch loop targeting: {_root}");
+            _watcher.EnableRaisingEvents = false;
+            _watcher.Dispose();
+            _watcher = null;
+        }
+
+        _root = targetRoot;
+        Logger.LogInfo($"Initializing root tracking path: {_root}");
+        ImportFolder(_root); 
         
-        var watcher = new FileSystemWatcher(rootPath, "*.*")
+        // 3. Linux inotify Fix: Use completely empty string instead of *.* to catch raw file manager writes
+        string filter = OperatingSystem.IsLinux() ? "" : "*.*";
+
+        _watcher = new FileSystemWatcher(_root, filter)
         {
             IncludeSubdirectories = true,
-            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
+            // Catch every relevant bit configuration including sizing changes for atomic write cycles
+            NotifyFilter = NotifyFilters.LastWrite 
+                         | NotifyFilters.FileName 
+                         | NotifyFilters.DirectoryName 
+                         | NotifyFilters.CreationTime
+                         | NotifyFilters.Size,
             EnableRaisingEvents = true
         };
 
-        watcher.Changed += (s, e) => UpdateAssetMetadata(e.FullPath);
-        watcher.Created += (s, e) => UpdateAssetMetadata(e.FullPath);
-        watcher.Deleted += (s, e) => OnDeleted(e.FullPath);
+        _watcher.Changed += (s, e) => { Logger.LogTrace($"OS CHANGED event caught: {e.FullPath}"); UpdateAssetMetadata(e.FullPath); };
+        _watcher.Created += (s, e) => { Logger.LogTrace($"OS CREATED event caught: {e.FullPath}"); UpdateAssetMetadata(e.FullPath); };
+        _watcher.Deleted += (s, e) => { Logger.LogTrace($"OS DELETED event caught: {e.FullPath}"); OnDeleted(e.FullPath); };
+        _watcher.Renamed += (s, e) => 
+        { 
+            Logger.LogTrace($"OS RENAMED event caught: {e.OldFullPath} -> {e.FullPath}"); 
+            OnDeleted(e.OldFullPath); 
+            UpdateAssetMetadata(e.FullPath); 
+        };
+
+        Logger.LogSuccess($"FileSystemWatcher successfully initialized and listening on: {_root}");
     }
 
     private void OnDeleted(string absolutePath)
@@ -58,6 +99,7 @@ public class AssetDatabase
         var relative = Path.GetRelativePath(_root, absolutePath);
         if (_assets.Remove(relative))
         {
+            Logger.LogTrace($"Processing deletion. Removed tracking context for path: {relative}");
             Event<AssetRemoved>.Invoke(new AssetRemoved(relative));
         }
     }
@@ -73,16 +115,20 @@ public class AssetDatabase
         return new FileResult(false, null);
     }
     
-
     public void UpdateAssetMetadata(string absolutePath)
     {
+        if (Directory.Exists(absolutePath)) return;
+
         var relative = Path.GetRelativePath(_root, absolutePath);
         var ext = Path.GetExtension(absolutePath.AsSpan());
 
         if (!TryGetAssetType(ext, out var type)) return;
+        
         var info = new AssetInfo(relative, absolutePath, type, File.GetLastWriteTime(absolutePath));
         _assets[relative] = info;
         _dirtyFiles.Enqueue(absolutePath);
+        
+        Logger.LogSuccess($"Asset cache updated/added. Type: {type} | Path: {relative}");
         Event<AssetUpdated>.Invoke(new AssetUpdated(info));
     }
     
@@ -94,14 +140,18 @@ public class AssetDatabase
 
     public void ImportFolder(string rootPath)
     {
+        Logger.LogInfo($"Performing cold folder scan on: {rootPath}");
         var options = new EnumerationOptions { RecurseSubdirectories = true };
         var lookup = FastMap.GetAlternateLookup<ReadOnlySpan<char>>();
         int rootLen = rootPath.EndsWith(Path.DirectorySeparatorChar) ? rootPath.Length : rootPath.Length + 1;
 
+        int count = 0;
         var enumerable = new FileSystemEnumerable<bool>(
             rootPath,
             (ref entry) =>
             {
+                if (entry.IsDirectory) return true;
+
                 var ext = Path.GetExtension(entry.FileName);
                 if (!lookup.TryGetValue(ext, out var type)) return true;
                 
@@ -112,11 +162,13 @@ public class AssetDatabase
                 var info = new AssetInfo(relative, fullPath, type, lastWrite);
                 
                 _assets[relative] = info;
+                count++;
                 return true;
             },
             options);
 
         foreach (var _ in enumerable) { }
+        Logger.LogSuccess($"Import finished. Total source assets indexed into cache: {count}");
     }
 
     public void RequeueDirtyFile(string path)

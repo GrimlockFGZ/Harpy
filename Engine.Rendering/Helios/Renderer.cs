@@ -1,5 +1,4 @@
 using System.Drawing;
-using Engine.Core;
 using HarpyEngine.Resources.Mnemosyne;
 using Silk.NET.OpenGL;
 
@@ -16,7 +15,7 @@ public class HarpyRenderer(GlContext gl)
 
     public void Init()
     {
-        var assetDb = new AssetDatabase();
+        var assetDb = AssetDatabase.Instance;
         assetDb.Init(BaseDir);
         ResourceManager.Init(assetDb);
         

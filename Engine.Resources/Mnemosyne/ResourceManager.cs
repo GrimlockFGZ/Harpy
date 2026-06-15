@@ -9,7 +9,7 @@ public record struct ReloadRequested(object Resource) : IEvent;
 
 public static class ResourceManager
 {
-    private static AssetDatabase _db = new();
+    private static AssetDatabase _db = AssetDatabase.Instance;
     public static event Func<string, string, object>? OnShaderRequest;
 
     private static readonly Dictionary<string, object> _resources = new();
