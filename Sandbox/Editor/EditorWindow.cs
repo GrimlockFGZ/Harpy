@@ -13,7 +13,6 @@ namespace HarpyEngine.Sandbox.Editor
     {
         private readonly AssetDatabase _db;
         private readonly Registry _registry = new();
-        private readonly Dictionary<string, int> _assetIndexCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly HierarchyViewModel _hierarchyViewModel = new();
         private readonly InspectorViewModel _inspectorViewModel = new();
         private readonly List<IDisposable> _busSubscriptions = new();
@@ -40,8 +39,6 @@ namespace HarpyEngine.Sandbox.Editor
             _busSubscriptions.Add(Event<RemoveTransformRequestedEvent>.Subscribe(evt => OnRemoveTransformRequested(evt.Entry)));
             _busSubscriptions.Add(Event<EntityCreated>.Subscribe(_ => UpdateViewportTriangleCount()));
             _busSubscriptions.Add(Event<EntityDestroyed>.Subscribe(_ => UpdateViewportTriangleCount()));
-            _busSubscriptions.Add(Event<AssetUpdated>.Subscribe(evt => OnAssetUpdated(evt.Info)));
-            _busSubscriptions.Add(Event<AssetRemoved>.Subscribe(evt => OnAssetRemoved(evt.RelativePath)));
 
             HierarchyPanel.DataContext = _hierarchyViewModel;
             InspectorPanel.DataContext = _inspectorViewModel;
@@ -52,12 +49,7 @@ namespace HarpyEngine.Sandbox.Editor
             var assetPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
             _db.Init(assetPath);
 
-            // Populate content browser from initial scan
-            foreach (var asset in _db.GetAllAssets())
-            {
-                _assetIndexCache[asset.RelativePath] = ContentBrowserPanel.Assets.Count;
-                ContentBrowserPanel.Assets.Add(asset);
-            }
+            ContentBrowserPanel.Initialize(_db, assetPath);
         }
 
         private void SeedScene()
@@ -145,41 +137,6 @@ namespace HarpyEngine.Sandbox.Editor
             }
         }
 
-        private void OnAssetUpdated(AssetInfo info)
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                if (_assetIndexCache.TryGetValue(info.RelativePath, out var index))
-                {
-                    // Update in place using the cached index
-                    ContentBrowserPanel.Assets[index] = info;
-                }
-                else
-                {
-                    // New asset — append and cache its index
-                    _assetIndexCache[info.RelativePath] = ContentBrowserPanel.Assets.Count;
-                    ContentBrowserPanel.Assets.Add(info);
-                }
-            });
-        }
-
-        private void OnAssetRemoved(string relativePath)
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                if (!_assetIndexCache.TryGetValue(relativePath, out var index)) return;
-
-                ContentBrowserPanel.Assets.RemoveAt(index);
-                _assetIndexCache.Remove(relativePath);
-
-                // Shift all cached indices that were above the removed item
-                foreach (var key in _assetIndexCache.Keys.ToList())
-                {
-                    if (_assetIndexCache[key] > index)
-                        _assetIndexCache[key]--;
-                }
-            });
-        }
 
         private void OnNewProjectClicked(object? sender, RoutedEventArgs e)
         {

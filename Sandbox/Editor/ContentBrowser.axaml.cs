@@ -67,12 +67,12 @@ public partial class ContentBrowser : UserControl
         }
 
         var currentRelativeDir = Path.GetRelativePath(_rootDirectory, _currentDirectory);
-        if (currentRelativeDir == ".") currentRelativeDir = ""; 
+        if (currentRelativeDir == "." || currentRelativeDir == "./") currentRelativeDir = ""; 
 
         var itemsInThisFolder = _database.GetAllAssets().Where(asset =>
         {
             var assetDir = Path.GetDirectoryName(asset.RelativePath) ?? "";
-            return string.Equals(assetDir.Replace('\\', '/'), currentRelativeDir.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase);
+            return string.Equals(assetDir.Replace('\\', '/').TrimEnd('/'), currentRelativeDir.Replace('\\', '/').TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
         }).ToList();
 
         Logger.LogTrace($"Database contains {itemsInThisFolder.Count} file(s) matching this folder view profile context.");
@@ -89,8 +89,8 @@ public partial class ContentBrowser : UserControl
     {
         var assetDir = Path.GetDirectoryName(ev.Info.AbsolutePath) ?? "";
         
-        bool isDirectChildFile = string.Equals(assetDir, _currentDirectory, StringComparison.OrdinalIgnoreCase);
-        bool isDirectChildFolder = ev.Info.Type == AssetType.Folder && string.Equals(Path.GetDirectoryName(ev.Info.AbsolutePath), _currentDirectory, StringComparison.OrdinalIgnoreCase);
+        bool isDirectChildFile = string.Equals(assetDir.Replace('\\', '/').TrimEnd('/'), _currentDirectory.Replace('\\', '/').TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
+        bool isDirectChildFolder = ev.Info.Type == AssetType.Folder && isDirectChildFile;
 
         Logger.LogTrace($"OnAssetUpdated intercepted: Path={ev.Info.AbsolutePath} | Type={ev.Info.Type} | IsTargetChild={isDirectChildFile || isDirectChildFolder}");
 
@@ -102,11 +102,12 @@ public partial class ContentBrowser : UserControl
 
     private void OnAssetRemoved(AssetRemoved ev)
     {
-        var fullPath = Path.Combine(_rootDirectory, ev.RelativePath);
+        if (_database == null) return;
+        var fullPath = Path.Combine(_database.GetRootPath(), ev.RelativePath);
         var assetDir = Path.GetDirectoryName(fullPath) ?? "";
 
-        bool isDirectChildFile = string.Equals(assetDir, _currentDirectory, StringComparison.OrdinalIgnoreCase);
-        bool isOurCurrentFolderDeleted = string.Equals(fullPath, _currentDirectory, StringComparison.OrdinalIgnoreCase);
+        bool isDirectChildFile = string.Equals(assetDir.Replace('\\', '/').TrimEnd('/'), _currentDirectory.Replace('\\', '/').TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
+        bool isOurCurrentFolderDeleted = string.Equals(fullPath.Replace('\\', '/').TrimEnd('/'), _currentDirectory.Replace('\\', '/').TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
 
         Logger.LogTrace($"OnAssetRemoved intercepted: RelPath={ev.RelativePath} | IsTargetChildOrActiveFolder={isDirectChildFile || isOurCurrentFolderDeleted}");
 

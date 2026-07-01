@@ -32,6 +32,7 @@ public class AssetDatabase
         { ".gltf", AssetType.Model },
         { ".anim", AssetType.Animation },
         { ".mat", AssetType.Material },
+        { ".txt", AssetType.Unknown },
     };
 
     private static readonly FrozenDictionary<string, AssetType> FastMap = 
@@ -98,8 +99,8 @@ public class AssetDatabase
 
     private void AttachFileWatcher()
     {
-        // 3. Linux inotify Fix: Use completely empty string instead of *.* to catch raw file manager writes
-        string filter = OperatingSystem.IsLinux() ? "" : "*.*";
+        // 3. Linux inotify Fix: Use * to catch all files correctly
+        string filter = OperatingSystem.IsLinux() ? "*" : "*.*";
 
         _watcher = new FileSystemWatcher(_root, filter)
         {
@@ -154,7 +155,11 @@ public class AssetDatabase
         var relative = Path.GetRelativePath(_root, absolutePath);
         var ext = Path.GetExtension(absolutePath.AsSpan());
 
-        if (!TryGetAssetType(ext, out var type)) return;
+        if (!TryGetAssetType(ext, out var type))
+        {
+            Logger.LogTrace($"Ignoring asset with unknown extension: {absolutePath}");
+            return;
+        }
         
         var info = new AssetInfo(relative, absolutePath, type, File.GetLastWriteTime(absolutePath));
         _assets[relative] = info;
@@ -213,5 +218,6 @@ public class AssetDatabase
         return ref CollectionsMarshal.GetValueRefOrNullRef(_assets, relativePath);
     }
 
+    public string GetRootPath() => _root;
     public IEnumerable<AssetInfo> GetAllAssets() => _assets.Values;
 }
