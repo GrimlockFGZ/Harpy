@@ -97,7 +97,7 @@ public partial class ContentBrowser : UserControl
         if (!isDirectChildFile && !isDirectChildFolder) return;
 
         Logger.LogTrace("Dispatching UI refresh request payload to the UI Thread context loop...");
-        Dispatcher.UIThread.Post(() => RefreshUI());
+        Dispatcher.UIThread.Post(RefreshUI);
     }
 
     private void OnAssetRemoved(AssetRemoved ev)
@@ -137,13 +137,12 @@ public partial class ContentBrowser : UserControl
         {
             Logger.LogInfo($"Executing open pipeline request anchor for asset target item: {selectedAsset.RelativePath}");
             
-            // Pass the asset directly to the launcher pipeline
             LaunchAssetFile(selectedAsset);
         }
     }
 }
 
-private void LaunchAssetFile(AssetInfo asset)
+private static void LaunchAssetFile(AssetInfo asset)
 {
     if (!File.Exists(asset.AbsolutePath))
     {

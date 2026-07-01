@@ -66,6 +66,38 @@ public class AssetDatabase
         Logger.LogInfo($"Initializing root tracking path: {_root}");
         ImportFolder(_root); 
         
+        AttachFileWatcher();
+    }
+
+    public void UpdatePath(string rootPath)
+    {
+        // 1. Normalize the incoming path format immediately
+        string targetRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath));
+
+        // 2. IDEMPOTENCY GUARD: If already watching an Asset folder, block root-level hijacking attempts.
+        if (_watcher != null)
+        {
+            if (_root.EndsWith("Assets", StringComparison.OrdinalIgnoreCase) && !targetRoot.EndsWith("Assets", StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.LogWarning($"AssetDatabase already initialized on explicit directory context: {_root}. Intercepted and blocked lower-priority root clobber request targeting: {targetRoot}");
+                return;
+            }
+
+            Logger.LogInfo($"Re-routing asset workspace context. Cleaning up old watch loop targeting: {_root}");
+            _watcher.EnableRaisingEvents = false;
+            _watcher.Dispose();
+            _watcher = null;
+        }
+        _assets.Clear();
+        _dirtyFiles.Clear();
+        _root = targetRoot;
+        Logger.LogInfo($"Initializing root tracking path: {_root}");
+        ImportFolder(_root);
+        AttachFileWatcher();
+    }
+
+    private void AttachFileWatcher()
+    {
         // 3. Linux inotify Fix: Use completely empty string instead of *.* to catch raw file manager writes
         string filter = OperatingSystem.IsLinux() ? "" : "*.*";
 
@@ -74,10 +106,10 @@ public class AssetDatabase
             IncludeSubdirectories = true,
             // Catch every relevant bit configuration including sizing changes for atomic write cycles
             NotifyFilter = NotifyFilters.LastWrite 
-                         | NotifyFilters.FileName 
-                         | NotifyFilters.DirectoryName 
-                         | NotifyFilters.CreationTime
-                         | NotifyFilters.Size,
+                           | NotifyFilters.FileName 
+                           | NotifyFilters.DirectoryName 
+                           | NotifyFilters.CreationTime
+                           | NotifyFilters.Size,
             EnableRaisingEvents = true
         };
 

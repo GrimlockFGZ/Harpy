@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Engine;
 using Engine.Core;
@@ -178,6 +179,26 @@ namespace HarpyEngine.Sandbox.Editor
                         _assetIndexCache[key]--;
                 }
             });
+        }
+
+        private void OnNewProjectClicked(object? sender, RoutedEventArgs e)
+        {
+            var dialog = new NewProjectDialog();
+            dialog.Closed += OnNewDialogClosed;
+            dialog.ShowDialog(this);
+        }
+        private void OnNewDialogClosed(object? sender, EventArgs e)
+        {
+            if (sender is not NewProjectDialog dialog || dialog.ProjectPath ==null)
+            {
+                Logger.LogError("NewProjectDialog closed without a valid project path.");
+                return;
+            }
+            
+            AssetDatabase.Instance.UpdatePath(dialog.ProjectPath);
+            ContentBrowserPanel.Initialize(AssetDatabase.Instance,dialog.ProjectPath);
+            var projectName = Path.GetFileName(Path.TrimEndingDirectorySeparator(dialog.ProjectPath));
+            Title = $"Harpy Engine - {projectName}";
         }
 
         protected override void OnClosed(EventArgs e)

@@ -28,5 +28,9 @@
         <ProjectReference Include="..\Engine.Rendering\Engine.Rendering.csproj" />
         <ProjectReference Include="..\Engine.Resources\Engine.Resources.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="CoreEngine.cs" />
+    </ItemGroup>
     
 </Project>
