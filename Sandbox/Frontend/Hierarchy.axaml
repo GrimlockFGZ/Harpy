@@ -95,11 +95,13 @@
             <Setter Property="Foreground" Value="#7c5cfc"/>
         </Style>
 
-        <!-- Entity name text -->
+        <!-- Entity name layout -->
         <Style Selector="TextBlock.EntityName">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Foreground" Value="#999999"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Center"/>
         </Style>
 
         <!-- Entity type badge -->
@@ -166,15 +168,17 @@
                  SelectedItem="{Binding SelectedEntry}">
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="models:HierarchyEntry">
-                    <Grid ColumnDefinitions="10, *, Auto">
+                    <Grid ColumnDefinitions="Auto, *, Auto">
                         <Ellipse Grid.Column="0"
                                  Classes="EntityDot"
-                                 HorizontalAlignment="Left"/>
+                                 HorizontalAlignment="Left"
+                                 Margin="0,0,8,0"/>
                         <TextBlock Grid.Column="1"
                                    Classes="EntityName"
-                                   Text="{Binding Name}"
-                                   Margin="8,0,0,0"/>
-                        <Border Grid.Column="2" Classes="EntityTag">
+                                   Text="{Binding Name}"/>
+                        <Border Grid.Column="2" 
+                                Classes="EntityTag"
+                                Margin="8,0,0,0">
                             <TextBlock Classes="EntityTagText" Text="{Binding Tag}"/>
                         </Border>
                     </Grid>

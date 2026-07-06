@@ -8,7 +8,7 @@ public class HarpyRenderer(GlContext gl)
 {
     private Mesh _triangleMesh = null!;
     private double _totalTime;
-    private readonly List<IDisposable> _subscriptions = new();
+    private readonly List<IDisposable> _subscriptions = [];
     public int TriangleInstanceCount { get; set; }
     private static readonly string BaseDir = AppDomain.CurrentDomain.BaseDirectory;
     private readonly string _assetDir = BaseDir + "Assets/";

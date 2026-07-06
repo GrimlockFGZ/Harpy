@@ -56,7 +56,7 @@ public static class ResourceManager
     private static void RegisterDependency(string path, object asset)
     {
         var normalizedPath = Path.GetFullPath(path).ToLowerInvariant();
-        if (!_fileDependencies.ContainsKey(normalizedPath)) _fileDependencies[normalizedPath] = new();
+        if (!_fileDependencies.ContainsKey(normalizedPath)) _fileDependencies[normalizedPath] = [];
         _fileDependencies[normalizedPath].Add(asset);
     }
 

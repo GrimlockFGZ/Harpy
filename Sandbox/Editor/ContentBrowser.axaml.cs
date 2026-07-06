@@ -16,7 +16,7 @@ public partial class ContentBrowser : UserControl
     private string _currentDirectory = "";
     private AssetDatabase? _database;
 
-    public ObservableCollection<AssetInfo> Assets { get; } = new();
+    public ObservableCollection<AssetInfo> Assets { get; } = [];
 
     public ContentBrowser()
     {
@@ -67,7 +67,7 @@ public partial class ContentBrowser : UserControl
         }
 
         var currentRelativeDir = Path.GetRelativePath(_rootDirectory, _currentDirectory);
-        if (currentRelativeDir == "." || currentRelativeDir == "./") currentRelativeDir = ""; 
+        if (currentRelativeDir is "." or "./") currentRelativeDir = ""; 
 
         var itemsInThisFolder = _database.GetAllAssets().Where(asset =>
         {
@@ -125,9 +125,8 @@ public partial class ContentBrowser : UserControl
     }
 
     private void OnAssetDoubleTapped(object? sender, RoutedEventArgs e)
-{
-    if (sender is ListBox listBox && listBox.SelectedItem is AssetInfo selectedAsset)
     {
+        if (sender is not ListBox listBox || listBox.SelectedItem is not AssetInfo selectedAsset) return;
         if (selectedAsset.Type == AssetType.Folder)
         {
             Logger.LogTrace($"Diving downward into child folder directory context: {selectedAsset.AbsolutePath}");
@@ -137,11 +136,10 @@ public partial class ContentBrowser : UserControl
         else
         {
             Logger.LogInfo($"Executing open pipeline request anchor for asset target item: {selectedAsset.RelativePath}");
-            
+                
             LaunchAssetFile(selectedAsset);
         }
     }
-}
 
 private static void LaunchAssetFile(AssetInfo asset)
 {

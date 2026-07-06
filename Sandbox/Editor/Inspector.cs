@@ -16,7 +16,7 @@ namespace HarpyEngine.Sandbox.Editor
         // Called by the "Apply Changes" button.
         // Delegates to the view model, which fires ApplyRequestedEvent on the
         // global event bus. EditorWindow.OnApplyRequested handles the actual
-        // registry write and sets the status string.
+        // registry-write and sets the status string.
         private void OnApplyClick(object? sender, RoutedEventArgs e)
         {
             ViewModel.ApplyChanges();

@@ -57,7 +57,6 @@
             <Setter Property="CornerRadius" Value="3"/>
         </Style>
         <Style Selector="TextBox.VectorInput:focus /template/ Border#PART_BorderElement">
-            <Setter Property="BorderBrush" Value="#7c5cfc"/>
         </Style>
 
         <!-- Name TextBox -->

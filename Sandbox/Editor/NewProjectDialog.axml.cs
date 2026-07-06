@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using JetBrains.Annotations;
 
 namespace HarpyEngine.Sandbox.Editor;
 
@@ -12,7 +13,8 @@ public partial class NewProjectDialog : Window
     {
         InitializeComponent();
     }
-
+    
+    [UsedImplicitly]
     private async void OnBrowseClicked(object? sender, RoutedEventArgs e)
     {
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
@@ -24,11 +26,13 @@ public partial class NewProjectDialog : Window
             LocationBox.Text = folders[0].TryGetLocalPath();
     }
 
+    [UsedImplicitly]
     private void OnCancelClicked(object? sender, RoutedEventArgs e)
     {
         Close();
     }
-
+    
+    [UsedImplicitly]
     private void OnCreateClicked(object? sender, RoutedEventArgs e)
     {
         var name = ProjectNameBox.Text?.Trim();

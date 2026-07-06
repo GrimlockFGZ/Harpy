@@ -23,11 +23,9 @@
             <Setter Property="Padding" Value="12,5"/>
         </Style>
         <Style Selector="MenuItem:pointerover /template/ ContentPresenter#PART_HeaderPresenter">
-            <Setter Property="Background" Value="#252525"/>
             <Setter Property="Foreground" Value="#ffffff"/>
         </Style>
         <Style Selector="MenuItem:selected /template/ ContentPresenter#PART_HeaderPresenter">
-            <Setter Property="Background" Value="#7c5cfc"/>
             <Setter Property="Foreground" Value="#ffffff"/>
         </Style>
     </Window.Styles>

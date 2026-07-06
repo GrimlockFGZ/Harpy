@@ -7,7 +7,7 @@ namespace HarpyEngine.Rendering.Helios;
 public class RenderBridge
 {
     private readonly GlContext _gl;
-    private readonly List<IDisposable> _subscriptions = new();
+    private readonly List<IDisposable> _subscriptions = [];
 
     public RenderBridge(GlContext gl)
     {

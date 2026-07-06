@@ -15,7 +15,7 @@ namespace HarpyEngine.Sandbox.Editor
         private readonly Registry _registry = new();
         private readonly HierarchyViewModel _hierarchyViewModel = new();
         private readonly InspectorViewModel _inspectorViewModel = new();
-        private readonly List<IDisposable> _busSubscriptions = new();
+        private readonly List<IDisposable> _busSubscriptions = [];
 
         public EditorWindow()
         {

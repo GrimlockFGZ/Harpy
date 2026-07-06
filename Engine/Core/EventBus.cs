@@ -22,14 +22,9 @@ public static class Event<T> where T : IEvent
     /// <summary>
     /// Statically typed generic subscription that directly targets the parent's event state.
     /// </summary>
-    private sealed class Subscription : IDisposable
+    private sealed class Subscription(Action<T> handler) : IDisposable
     {
-        private Action<T>? _handler;
-
-        public Subscription(Action<T> handler)
-        {
-            _handler = handler;
-        }
+        private Action<T>? _handler = handler;
 
         public void Dispose()
         {

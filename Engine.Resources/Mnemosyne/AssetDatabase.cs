@@ -72,10 +72,8 @@ public class AssetDatabase
 
     public void UpdatePath(string rootPath)
     {
-        // 1. Normalize the incoming path format immediately
         string targetRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath));
 
-        // 2. IDEMPOTENCY GUARD: If already watching an Asset folder, block root-level hijacking attempts.
         if (_watcher != null)
         {
             if (_root.EndsWith("Assets", StringComparison.OrdinalIgnoreCase) && !targetRoot.EndsWith("Assets", StringComparison.OrdinalIgnoreCase))
@@ -99,7 +97,6 @@ public class AssetDatabase
 
     private void AttachFileWatcher()
     {
-        // 3. Linux inotify Fix: Use * to catch all files correctly
         string filter = OperatingSystem.IsLinux() ? "*" : "*.*";
 
         _watcher = new FileSystemWatcher(_root, filter)
@@ -114,10 +111,10 @@ public class AssetDatabase
             EnableRaisingEvents = true
         };
 
-        _watcher.Changed += (s, e) => { Logger.LogTrace($"OS CHANGED event caught: {e.FullPath}"); UpdateAssetMetadata(e.FullPath); };
-        _watcher.Created += (s, e) => { Logger.LogTrace($"OS CREATED event caught: {e.FullPath}"); UpdateAssetMetadata(e.FullPath); };
-        _watcher.Deleted += (s, e) => { Logger.LogTrace($"OS DELETED event caught: {e.FullPath}"); OnDeleted(e.FullPath); };
-        _watcher.Renamed += (s, e) => 
+        _watcher.Changed += (_, e) => { Logger.LogTrace($"OS CHANGED event caught: {e.FullPath}"); UpdateAssetMetadata(e.FullPath); };
+        _watcher.Created += (_, e) => { Logger.LogTrace($"OS CREATED event caught: {e.FullPath}"); UpdateAssetMetadata(e.FullPath); };
+        _watcher.Deleted += (_, e) => { Logger.LogTrace($"OS DELETED event caught: {e.FullPath}"); OnDeleted(e.FullPath); };
+        _watcher.Renamed += (_, e) => 
         { 
             Logger.LogTrace($"OS RENAMED event caught: {e.OldFullPath} -> {e.FullPath}"); 
             OnDeleted(e.OldFullPath); 
@@ -130,22 +127,16 @@ public class AssetDatabase
     private void OnDeleted(string absolutePath)
     {
         var relative = Path.GetRelativePath(_root, absolutePath);
-        if (_assets.Remove(relative))
-        {
-            Logger.LogTrace($"Processing deletion. Removed tracking context for path: {relative}");
-            Event<AssetRemoved>.Invoke(new AssetRemoved(relative));
-        }
+        if (!_assets.Remove(relative)) return;
+        Logger.LogTrace($"Processing deletion. Removed tracking context for path: {relative}");
+        Event<AssetRemoved>.Invoke(new AssetRemoved(relative));
     }
 
     public readonly record struct FileResult(bool Success, string? Path);
 
     public FileResult TryGetNextDirtyFile()
     {
-        if (_dirtyFiles.TryDequeue(out var path))
-        {
-            return new FileResult(true, path);
-        }
-        return new FileResult(false, null);
+        return _dirtyFiles.TryDequeue(out var path) ? new FileResult(true, path) : new FileResult(false, null);
     }
     
     public void UpdateAssetMetadata(string absolutePath)
@@ -180,9 +171,9 @@ public class AssetDatabase
         Logger.LogInfo($"Performing cold folder scan on: {rootPath}");
         var options = new EnumerationOptions { RecurseSubdirectories = true };
         var lookup = FastMap.GetAlternateLookup<ReadOnlySpan<char>>();
-        int rootLen = rootPath.EndsWith(Path.DirectorySeparatorChar) ? rootPath.Length : rootPath.Length + 1;
+        var rootLen = rootPath.EndsWith(Path.DirectorySeparatorChar) ? rootPath.Length : rootPath.Length + 1;
 
-        int count = 0;
+        var count = 0;
         var enumerable = new FileSystemEnumerable<bool>(
             rootPath,
             (ref entry) =>

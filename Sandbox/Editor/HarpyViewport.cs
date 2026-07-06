@@ -65,10 +65,7 @@ public class HarpyViewport : OpenGlControlBase
         var delta = now - _lastTime;
         _lastTime = now;
 
-        if (_renderer != null)
-        {
-            _renderer.TriangleInstanceCount = Math.Max(0, TriangleInstanceCount);
-        }
+        _renderer?.TriangleInstanceCount = Math.Max(0, TriangleInstanceCount);
 
         _renderer?.Render(delta, false);
     

@@ -119,14 +119,15 @@
                     <StackPanel Width="72" Spacing="5" HorizontalAlignment="Center">
                         <Border Height="44"
                                 CornerRadius="4"
-                                Background="{Binding Type, Converter={x:Static helpers:TypeToBrushConverter.Instance}}">
-                            <TextBlock
-                                Text="{Binding Type, Converter={x:Static helpers:TypeToLabelConverter.Instance}}"
-                                FontSize="9"
-                                FontWeight="Bold"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Foreground="{Binding Type, Converter={x:Static helpers:TypeToForegroundConverter.Instance}}"/>
+                                Background="#1c1c1c"
+                                BorderBrush="#262626"
+                                BorderThickness="1">
+                            <PathIcon Data="{Binding Type, Converter={x:Static helpers:AssetTypeToIconConverter.Instance}}"
+                                      Foreground="{Binding Type, Converter={x:Static helpers:TypeToForegroundConverter.Instance}}"
+                                      Width="18"
+                                      Height="18"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
                         </Border>
                         <TextBlock Classes="AssetName"
                                    Text="{Binding RelativePath, Converter={x:Static helpers:PathToNameConverter.Instance}}"/>
