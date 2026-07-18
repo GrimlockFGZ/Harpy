@@ -137,7 +137,6 @@ namespace HarpyEngine.Sandbox.Editor
             }
         }
 
-
         private void OnNewProjectClicked(object? sender, RoutedEventArgs e)
         {
             var dialog = new NewProjectDialog();
@@ -146,11 +145,7 @@ namespace HarpyEngine.Sandbox.Editor
         }
         private void OnNewDialogClosed(object? sender, EventArgs e)
         {
-            if (sender is not NewProjectDialog dialog || dialog.ProjectPath ==null)
-            {
-                Logger.LogError("NewProjectDialog closed without a valid project path.");
-                return;
-            }
+            if (sender is not NewProjectDialog dialog || dialog.ProjectPath == null) return;
             
             AssetDatabase.Instance.UpdatePath(dialog.ProjectPath);
             ContentBrowserPanel.Initialize(AssetDatabase.Instance,dialog.ProjectPath);

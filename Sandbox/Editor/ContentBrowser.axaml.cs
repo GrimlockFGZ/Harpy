@@ -57,7 +57,7 @@ public partial class ContentBrowser : UserControl
                 foreach (var dir in Directory.GetDirectories(_currentDirectory))
                 {
                     var relative = Path.GetRelativePath(_rootDirectory, dir);
-                    Assets.Add(new AssetInfo(relative, dir, AssetType.Folder, Directory.GetLastWriteTime(dir)));
+                    Assets.Add(new AssetInfo(relative, dir, AssetType.Folder));
                 }
             }
         }
@@ -89,8 +89,8 @@ public partial class ContentBrowser : UserControl
     {
         var assetDir = Path.GetDirectoryName(ev.Info.AbsolutePath) ?? "";
         
-        bool isDirectChildFile = string.Equals(assetDir.Replace('\\', '/').TrimEnd('/'), _currentDirectory.Replace('\\', '/').TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
-        bool isDirectChildFolder = ev.Info.Type == AssetType.Folder && isDirectChildFile;
+        var isDirectChildFile = string.Equals(assetDir.Replace('\\', '/').TrimEnd('/'), _currentDirectory.Replace('\\', '/').TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
+        var isDirectChildFolder = ev.Info.Type == AssetType.Folder && isDirectChildFile;
 
         Logger.LogTrace($"OnAssetUpdated intercepted: Path={ev.Info.AbsolutePath} | Type={ev.Info.Type} | IsTargetChild={isDirectChildFile || isDirectChildFolder}");
 
@@ -106,8 +106,8 @@ public partial class ContentBrowser : UserControl
         var fullPath = Path.Combine(_database.GetRootPath(), ev.RelativePath);
         var assetDir = Path.GetDirectoryName(fullPath) ?? "";
 
-        bool isDirectChildFile = string.Equals(assetDir.Replace('\\', '/').TrimEnd('/'), _currentDirectory.Replace('\\', '/').TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
-        bool isOurCurrentFolderDeleted = string.Equals(fullPath.Replace('\\', '/').TrimEnd('/'), _currentDirectory.Replace('\\', '/').TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
+        var isDirectChildFile = string.Equals(assetDir.Replace('\\', '/').TrimEnd('/'), _currentDirectory.Replace('\\', '/').TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
+        var isOurCurrentFolderDeleted = string.Equals(fullPath.Replace('\\', '/').TrimEnd('/'), _currentDirectory.Replace('\\', '/').TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
 
         Logger.LogTrace($"OnAssetRemoved intercepted: RelPath={ev.RelativePath} | IsTargetChildOrActiveFolder={isDirectChildFile || isOurCurrentFolderDeleted}");
 
@@ -189,24 +189,24 @@ private static void LaunchAssetFile(AssetInfo asset)
         breadcrumbContainer.Children.Clear();
 
         var rootSegment = new TextBlock { Text = "Assets", Classes = { "BreadcrumbSegment" } };
-        rootSegment.Tapped += (s, e) => { _currentDirectory = _rootDirectory; RefreshUI(); };
+        rootSegment.Tapped += (_,_) => { _currentDirectory = _rootDirectory; RefreshUI(); };
         breadcrumbContainer.Children.Add(rootSegment);
 
-        string relative = Path.GetRelativePath(_rootDirectory, _currentDirectory);
+        var relative = Path.GetRelativePath(_rootDirectory, _currentDirectory);
         if (relative == ".") return;
 
-        string[] steps = relative.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
-        string accumulatedPath = _rootDirectory;
+        var steps = relative.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+       var accumulatedPath = _rootDirectory;
 
         foreach (var step in steps)
         {
             accumulatedPath = Path.Combine(accumulatedPath, step);
-            string capturedPath = accumulatedPath; 
+            var capturedPath = accumulatedPath; 
 
             breadcrumbContainer.Children.Add(new TextBlock { Text = " › ", Classes = { "BreadcrumbSep" } });
 
             var segment = new TextBlock { Text = step, Classes = { "BreadcrumbSegment" } };
-            segment.Tapped += (s, e) => { _currentDirectory = capturedPath; RefreshUI(); };
+            segment.Tapped += (_, _) => { _currentDirectory = capturedPath; RefreshUI(); };
             breadcrumbContainer.Children.Add(segment);
         }
     }

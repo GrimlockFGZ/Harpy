@@ -52,9 +52,9 @@ public readonly struct Quaternion : IEquatable<Quaternion>, IFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Vector3 Rotate(Vector3 v)
     {
-        Vector3 qv = this.XYZ;
+        var qv = this.XYZ;
         // Uses your Vector3.Cross and operators
-        Vector3 t = Vector3.Cross(qv, v) * 2f;
+        var t = Vector3.Cross(qv, v) * 2f;
         return v + (t * W) + Vector3.Cross(qv, t);
     }
     
@@ -70,8 +70,8 @@ public readonly struct Quaternion : IEquatable<Quaternion>, IFormattable
     // --- Interpolation ---
     public static Quaternion Slerp(Quaternion a, Quaternion b, float t)
     {
-        float dot = Dot(a, b);
-        Quaternion targetB = b;
+        var dot = Dot(a, b);
+        var targetB = b;
 
         if (dot < 0f) { targetB = new Quaternion(-b._v); dot = -dot; }
 
@@ -81,10 +81,10 @@ public readonly struct Quaternion : IEquatable<Quaternion>, IFormattable
             return new Quaternion(SNVector4.Normalize(a._v + (targetB._v - a._v) * t));
         }
 
-        float angle = MathF.Acos(MathF.Max(-1f, MathF.Min(1f, dot)));
-        float invSinAngle = 1f / MathF.Sin(angle);
-        float sa = MathF.Sin((1f - t) * angle) * invSinAngle;
-        float sb = MathF.Sin(t * angle) * invSinAngle;
+        var angle = MathF.Acos(MathF.Max(-1f, MathF.Min(1f, dot)));
+        var invSinAngle = 1f / MathF.Sin(angle);
+        var sa = MathF.Sin((1f - t) * angle) * invSinAngle;
+        var sb = MathF.Sin(t * angle) * invSinAngle;
 
         return new Quaternion((a._v * sa) + (targetB._v * sb));
     }

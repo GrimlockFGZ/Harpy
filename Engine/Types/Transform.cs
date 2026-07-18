@@ -68,8 +68,8 @@ public  struct Transform : IEquatable<Transform>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Vector3 InverseTransformPoint(Vector3 worldPoint)
     {
-        Vector3 unTranslated = worldPoint - Position;
-        Vector3 unRotated = Rotation.InverseRotate(unTranslated);
+        var unTranslated = worldPoint - Position;
+        var unRotated = Rotation.InverseRotate(unTranslated);
         
         // Guard against division by zero in scale
         return new Vector3(
@@ -85,8 +85,8 @@ public  struct Transform : IEquatable<Transform>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Transform Combine(Transform parent, Transform child)
     {
-        Vector3 worldPos = parent.TransformPoint(child.Position);
-        Quaternion worldRot = parent.Rotation * child.Rotation;
+        var worldPos = parent.TransformPoint(child.Position);
+        var worldRot = parent.Rotation * child.Rotation;
         Vector3 worldScale = new(
             parent.Scale.X * child.Scale.X,
             parent.Scale.Y * child.Scale.Y,
@@ -98,14 +98,14 @@ public  struct Transform : IEquatable<Transform>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Transform Inverse()
     {
-        Quaternion invRot = Quaternion.Conjugate(Rotation);
+        var invRot = Quaternion.Conjugate(Rotation);
         Vector3 invScale = new(
             Scale.X != 0f ? 1f / Scale.X : 0f,
             Scale.Y != 0f ? 1f / Scale.Y : 0f,
             Scale.Z != 0f ? 1f / Scale.Z : 0f);
 
         // Position inversion: Rotate and scale the negative translation
-        Vector3 invPos = invRot.Rotate(new Vector3(
+        var invPos = invRot.Rotate(new Vector3(
             -Position.X * invScale.X,
             -Position.Y * invScale.Y,
             -Position.Z * invScale.Z));

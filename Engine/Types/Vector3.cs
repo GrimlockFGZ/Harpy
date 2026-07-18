@@ -76,7 +76,7 @@ public readonly struct Vector3(float x, float y, float z) : IEquatable<Vector3>
 
     public Vector3 Normalized()
     {
-        float length = Magnitude;
+        var length = Magnitude;
         return length > Epsilon ? this / length : Zero;
     }
 

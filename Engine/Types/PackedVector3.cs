@@ -22,13 +22,13 @@ public readonly struct PackedVector3 : IEquatable<PackedVector3>
     public PackedVector3(float x, float y, float z, ushort blockId = 0, byte lightLevel = 0)
     {
         // Clamp as floats first (since input is float), then cast to uint
-        uint packedX = (uint)Math.Clamp(x, 0.0f, 63.0f) & SixBitMask;
-        uint packedY = (uint)Math.Clamp(y, 0.0f, 63.0f) & SixBitMask;
-        uint packedZ = (uint)Math.Clamp(z, 0.0f, 63.0f) & SixBitMask;
+        var packedX = (uint)Math.Clamp(x, 0.0f, 63.0f) & SixBitMask;
+        var packedY = (uint)Math.Clamp(y, 0.0f, 63.0f) & SixBitMask;
+        var packedZ = (uint)Math.Clamp(z, 0.0f, 63.0f) & SixBitMask;
 
         // Clamp as uints for the ID and Light
-        uint packedId = Math.Clamp(blockId, 0u, 1023u) & TenBitMask;
-        uint packedLight = Math.Clamp(lightLevel, 0u, 15u) & FourBitMask;
+        var packedId = Math.Clamp(blockId, 0u, 1023u) & TenBitMask;
+        var packedLight = Math.Clamp(lightLevel, 0u, 15u) & FourBitMask;
 
         // Perform the packing shifts
         _data = packedX 

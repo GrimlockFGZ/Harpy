@@ -40,6 +40,23 @@ public class Shader
     public void Use() => _gl.Api.UseProgram(Handle);
 
     /// <summary>
+    /// Uploads a 4x4 matrix uniform. Assumes this shader is already bound via <see cref="Use"/>.
+    /// </summary>
+    public unsafe void SetMatrix4(string name, in Engine.Matrix4x4 matrix)
+    {
+        var location = _gl.Api.GetUniformLocation(Handle, name);
+        if (location == -1) return;
+
+        Span<float> columnMajor = stackalloc float[16];
+        matrix.WriteColumnMajor(columnMajor);
+
+        fixed (float* ptr = columnMajor)
+        {
+            _gl.Api.UniformMatrix4(location, 1, false, ptr);
+        }
+    }
+
+    /// <summary>
     /// Reloads the shader program by recompiling and relinking the source files from disk.
     /// </summary>
     public void Reload()
@@ -98,7 +115,7 @@ public class Shader
         var infoLog = _gl.Api.GetShaderInfoLog(shader);
         _gl.Api.DeleteShader(shader);
 
-        string typeName = Enum.GetName(type) ?? "UnknownShader";
+        var typeName = Enum.GetName(type) ?? "UnknownShader";
 
         throw new ShaderException(typeName, infoLog);
     }

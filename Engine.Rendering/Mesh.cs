@@ -9,8 +9,7 @@ namespace HarpyEngine.Rendering;
 public class Mesh
 {
     private readonly uint _vao;
-    private readonly uint _vbo;
-    private GlContext _gl;
+    private readonly GlContext _gl;
     private readonly int _vertexCount;
 
     /// <summary>
@@ -19,15 +18,15 @@ public class Mesh
     /// <param name="gl">The OpenGL context.</param>
     /// <param name="vertices">The array of vertex data.</param>
     public Mesh(GlContext gl, float[] vertices)
-    { 
+    {
         _gl = gl; 
         _vertexCount = vertices.Length / 3;
         
         _vao = _gl.Api.GenVertexArray(); 
-        _vbo = _gl.Api.GenBuffer();
+        var vbo = _gl.Api.GenBuffer();
         
         _gl.Api.BindVertexArray(_vao); 
-        _gl.Api.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
+        _gl.Api.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
         
         _gl.Api.BufferData(BufferTargetARB.ArrayBuffer, (ReadOnlySpan<float>)vertices, BufferUsageARB.StaticDraw);
         

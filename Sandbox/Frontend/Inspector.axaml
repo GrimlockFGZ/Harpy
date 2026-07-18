@@ -87,6 +87,8 @@
         <Style Selector="Button.Apply:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="#141e1a"/>
         </Style>
+        
+        
 
         <!-- Add Component dropdown button -->
         <Style Selector="DropDownButton.AddComp">
@@ -266,7 +268,13 @@
 
                 </StackPanel>
             </Border>
-
+            
+            <TextBlock Text="{Binding Status}" 
+                       FontSize="9" 
+                       Foreground="#666666"
+                       Margin="10,4,10,0"
+                       HorizontalAlignment="Center"/>
+            
             <!-- Action buttons -->
             <Grid ColumnDefinitions="*, Auto"
                   Margin="10,8,10,8">

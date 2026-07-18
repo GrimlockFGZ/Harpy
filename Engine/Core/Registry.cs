@@ -101,16 +101,16 @@ public sealed class Registry
 
         if (pool1.Count < pool2.Count)
         {
-            ReadOnlySpan<Entity> entities = pool1.DenseEntities;
-            for (int i = 0; i < entities.Length; i++)
+            var entities = pool1.DenseEntities;
+            for (var i = 0; i < entities.Length; i++)
             {
                 if (pool2.Has(entities[i])) action(entities[i]);
             }
         }
         else
         {
-            ReadOnlySpan<Entity> entities = pool2.DenseEntities;
-            for (int i = 0; i < entities.Length; i++)
+            var entities = pool2.DenseEntities;
+            for (var i = 0; i < entities.Length; i++)
             {
                 if (pool1.Has(entities[i])) action(entities[i]);
             }
@@ -131,14 +131,14 @@ public sealed class Registry
         var p3 = Pool<T3>();
 
         // Safely determine the smallest pool without 'dynamic' keyword casting
-        int c1 = p1.Count;
-        int c2 = p2.Count;
-        int c3 = p3.Count;
+        var c1 = p1.Count;
+        var c2 = p2.Count;
+        var c3 = p3.Count;
 
         if (c1 <= c2 && c1 <= c3)
         {
-            ReadOnlySpan<Entity> entities = p1.DenseEntities;
-            for (int i = 0; i < entities.Length; i++)
+            var entities = p1.DenseEntities;
+            for (var i = 0; i < entities.Length; i++)
             {
                 var e = entities[i];
                 if (p2.Has(e) && p3.Has(e)) action(e);
@@ -146,8 +146,8 @@ public sealed class Registry
         }
         else if (c2 <= c1 && c2 <= c3)
         {
-            ReadOnlySpan<Entity> entities = p2.DenseEntities;
-            for (int i = 0; i < entities.Length; i++)
+            var entities = p2.DenseEntities;
+            for (var i = 0; i < entities.Length; i++)
             {
                 var e = entities[i];
                 if (p1.Has(e) && p3.Has(e)) action(e);
@@ -155,8 +155,8 @@ public sealed class Registry
         }
         else
         {
-            ReadOnlySpan<Entity> entities = p3.DenseEntities;
-            for (int i = 0; i < entities.Length; i++)
+            var entities = p3.DenseEntities;
+            for (var i = 0; i < entities.Length; i++)
             {
                 var e = entities[i];
                 if (p1.Has(e) && p2.Has(e)) action(e);

@@ -26,11 +26,11 @@ public class TypeToForegroundConverter : IValueConverter
     private static readonly SolidColorBrush FolderBrush = new(Color.Parse("#f39c12"));     // Folder Orange
     private static readonly SolidColorBrush DefaultBrush = new(Color.Parse("#aaaaaa"));    // Muted Gray
 
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is AssetType type)
+        return value switch
         {
-            return type switch
+            AssetType type => type switch
             {
                 AssetType.Shader => ShaderBrush,
                 AssetType.Texture => TextureBrush,
@@ -43,12 +43,8 @@ public class TypeToForegroundConverter : IValueConverter
                 AssetType.Scene => SceneBrush,
                 AssetType.Folder => FolderBrush,
                 _ => DefaultBrush
-            };
-        }
-
-        if (value is string stringType)
-        {
-            return stringType.ToUpperInvariant() switch
+            },
+            string stringType => stringType.ToUpperInvariant() switch
             {
                 "SHADER" => ShaderBrush,
                 "TEXTURE" or "TEX" => TextureBrush,
@@ -61,10 +57,9 @@ public class TypeToForegroundConverter : IValueConverter
                 "SCENE" or "SCEN" => SceneBrush,
                 "FOLDER" or "DIR" => FolderBrush,
                 _ => DefaultBrush
-            };
-        }
-
-        return DefaultBrush;
+            },
+            _ => DefaultBrush
+        };
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

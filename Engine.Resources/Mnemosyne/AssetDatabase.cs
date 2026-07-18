@@ -46,7 +46,7 @@ public class AssetDatabase
     public void Init(string rootPath)
     {
         // 1. Normalize the incoming path format immediately
-        string targetRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath));
+        var targetRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath));
 
         // 2. IDEMPOTENCY GUARD: If already watching an Asset folder, block root-level hijacking attempts.
         if (_watcher != null)
@@ -72,7 +72,7 @@ public class AssetDatabase
 
     public void UpdatePath(string rootPath)
     {
-        string targetRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath));
+        var targetRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath));
 
         if (_watcher != null)
         {
@@ -97,7 +97,7 @@ public class AssetDatabase
 
     private void AttachFileWatcher()
     {
-        string filter = OperatingSystem.IsLinux() ? "*" : "*.*";
+        var filter = OperatingSystem.IsLinux() ? "*" : "*.*";
 
         _watcher = new FileSystemWatcher(_root, filter)
         {
@@ -152,7 +152,7 @@ public class AssetDatabase
             return;
         }
         
-        var info = new AssetInfo(relative, absolutePath, type, File.GetLastWriteTime(absolutePath));
+        var info = new AssetInfo(relative, absolutePath, type);
         _assets[relative] = info;
         _dirtyFiles.Enqueue(absolutePath);
         
@@ -187,7 +187,7 @@ public class AssetDatabase
                 var relative = fullPath[rootLen..];
                 
                 var lastWrite = entry.LastWriteTimeUtc.DateTime;
-                var info = new AssetInfo(relative, fullPath, type, lastWrite);
+                var info = new AssetInfo(relative, fullPath, type);
                 
                 _assets[relative] = info;
                 count++;

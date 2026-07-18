@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
@@ -43,35 +41,35 @@ public class AssetTypeToIconConverter : IValueConverter
         [AssetType.Unknown] = StreamGeometry.Parse("M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z")
     };
 
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is AssetType assetType && IconMap.TryGetValue(assetType, out var geometry))
+        switch (value)
         {
-            return geometry;
-        }
-
-        if (value is string stringType)
-        {
-            var normalized = stringType.ToUpperInvariant();
-            var matchedType = normalized switch
+            case AssetType assetType when IconMap.TryGetValue(assetType, out var geometry):
+                return geometry;
+            case string stringType:
             {
-                "SHADER" => AssetType.Shader,
-                "TEXTURE" or "TEX" => AssetType.Texture,
-                "SCRIPT" or "CS" => AssetType.Script,
-                "MODEL" => AssetType.Model,
-                "ANIMATION" or "ANIM" => AssetType.Animation,
-                "MATERIAL" or "MAT" => AssetType.Material,
-                "MESH" => AssetType.Mesh,
-                "AUDIO" or "SFX" => AssetType.Audio,
-                "SCENE" or "SCEN" => AssetType.Scene,
-                "FOLDER" or "DIR" => AssetType.Folder,
-                _ => AssetType.Unknown
-            };
+                var normalized = stringType.ToUpperInvariant();
+                var matchedType = normalized switch
+                {
+                    "SHADER" => AssetType.Shader,
+                    "TEXTURE" or "TEX" => AssetType.Texture,
+                    "SCRIPT" or "CS" => AssetType.Script,
+                    "MODEL" => AssetType.Model,
+                    "ANIMATION" or "ANIM" => AssetType.Animation,
+                    "MATERIAL" or "MAT" => AssetType.Material,
+                    "MESH" => AssetType.Mesh,
+                    "AUDIO" or "SFX" => AssetType.Audio,
+                    "SCENE" or "SCEN" => AssetType.Scene,
+                    "FOLDER" or "DIR" => AssetType.Folder,
+                    _ => AssetType.Unknown
+                };
 
-            return IconMap[matchedType];
+                return IconMap[matchedType];
+            }
+            default:
+                return IconMap[AssetType.Unknown];
         }
-
-        return IconMap[AssetType.Unknown];
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

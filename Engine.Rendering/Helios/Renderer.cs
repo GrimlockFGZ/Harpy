@@ -1,4 +1,5 @@
 using System.Drawing;
+using Engine;
 using HarpyEngine.Resources.Mnemosyne;
 using Silk.NET.OpenGL;
 
@@ -12,6 +13,12 @@ public class HarpyRenderer(GlContext gl)
     public int TriangleInstanceCount { get; set; }
     private static readonly string BaseDir = AppDomain.CurrentDomain.BaseDirectory;
     private readonly string _assetDir = BaseDir + "Assets/";
+
+    /// <summary>
+    /// The active viewport camera. Public and mutable so the editor (or a future
+    /// scene camera entity) can reposition/reconfigure it.
+    /// </summary>
+    public Camera Camera { get; } = new(new Vector3(0f, 1f, 3f));
 
     public void Init()
     {
@@ -32,16 +39,18 @@ public class HarpyRenderer(GlContext gl)
             0.2f, -0.2f, 0.0f
         ];
         _triangleMesh = new Mesh(gl, vertices);
+
+        gl.Api.Enable(EnableCap.DepthTest);
     }
 
-    public void Render(double deltaTime, bool isWireframe)
+    public void Render(double deltaTime, bool isWireframe, float aspectRatio)
     {
         ResourceManager.CheckForReloads();
 
-        RenderShaders(deltaTime, isWireframe);
+        RenderShaders(deltaTime, isWireframe, aspectRatio);
     }
 
-    private void RenderShaders(double deltaTime, bool isWireframe)
+    private void RenderShaders(double deltaTime, bool isWireframe, float aspectRatio)
     {
         gl.Api.ClearColor(Color.FromArgb(30, 30, 35));
         gl.Api.Clear((uint)ClearBufferMask.ColorBufferBit | (uint)ClearBufferMask.DepthBufferBit);
@@ -60,6 +69,10 @@ public class HarpyRenderer(GlContext gl)
         gl.Api.Uniform1(gl.Api.GetUniformLocation(program, "uTime"), (float)_totalTime);
         gl.Api.Uniform1(gl.Api.GetUniformLocation(program, "uInstanceCount"), Math.Max(0, TriangleInstanceCount));
         gl.Api.Uniform1(gl.Api.GetUniformLocation(program, "uRadius"), 0.5f);
+
+        shader.SetMatrix4("uModel", Matrix4x4.Identity);
+        shader.SetMatrix4("uView", Camera.GetViewMatrix());
+        shader.SetMatrix4("uProjection", Camera.GetProjectionMatrix(aspectRatio));
 
         _triangleMesh.DrawInstanced(Math.Max(0, TriangleInstanceCount));
         gl.Api.PolygonMode(GLEnum.FrontAndBack, GLEnum.Fill);
