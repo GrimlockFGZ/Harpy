@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.IO.Enumeration;
-using System.Runtime.InteropServices;
 using Engine.Core;
 
 namespace HarpyEngine.Resources.Mnemosyne;
@@ -9,10 +8,14 @@ namespace HarpyEngine.Resources.Mnemosyne;
 public record struct AssetUpdated(AssetInfo Info) : IEvent;
 public record struct AssetRemoved(string RelativePath) : IEvent;
 
-public class AssetDatabase
+// Sealed: prevents subclassing from creating a second construction path
+// or exposing the protected/private constructor via a derived type.
+public sealed class AssetDatabase
 {
     // --- Singleton Architecture ---
-    private static readonly Lazy<AssetDatabase> _instance = new(() => new AssetDatabase());
+    private static readonly Lazy<AssetDatabase> _instance =
+        new(() => new AssetDatabase(), LazyThreadSafetyMode.ExecutionAndPublication);
+
     public static AssetDatabase Instance => _instance.Value;
 
     // Enforce private constructor to guarantee zero external instantiations
@@ -23,7 +26,7 @@ public class AssetDatabase
         { ".glsl", AssetType.Shader },
         { ".compute", AssetType.Shader },
         { ".png", AssetType.Texture },
-        { ".jpg", AssetType.Texture }, 
+        { ".jpg", AssetType.Texture },
         { ".tga", AssetType.Texture },
         { ".cs", AssetType.Script },
         { ".obj", AssetType.Model },
@@ -35,99 +38,124 @@ public class AssetDatabase
         { ".txt", AssetType.Unknown },
     };
 
-    private static readonly FrozenDictionary<string, AssetType> FastMap = 
+    private static readonly FrozenDictionary<string, AssetType> FastMap =
         ExtensionMap.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
+    // ConcurrentDictionary: safe for the FileSystemWatcher's background-thread
+    // writes to interleave with reads from GetAsset/GetAllAssets without locking.
+    private readonly ConcurrentDictionary<string, AssetInfo> _assets =
+        new(concurrencyLevel: Environment.ProcessorCount, capacity: 2048, StringComparer.OrdinalIgnoreCase);
+
     private readonly ConcurrentQueue<string> _dirtyFiles = new();
-    private readonly Dictionary<string, AssetInfo> _assets = new(2048, StringComparer.OrdinalIgnoreCase);
-    private string _root = "";
+
+    // Guards _root / _watcher reassignment and whole-collection operations
+    // (Init, UpdatePath, ImportFolder) so they can't interleave with each other
+    // or with a watcher callback mutating state mid-swap.
+    private readonly Lock _lifecycleLock = new();
+
+    private volatile string _root = "";
     private FileSystemWatcher? _watcher;
 
+    // Init is idempotent bootstrap: "make sure the database is running against
+    // *some* root." First caller wins; later callers are silent no-ops as long
+    // as a watcher is already active. Multiple independent systems (Renderer,
+    // EditorWindow, CI harness, etc.) can all call this defensively on startup
+    // without fighting each other or emitting a warning-per-startup.
     public void Init(string rootPath)
     {
-        // 1. Normalize the incoming path format immediately
-        var targetRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath));
-
-        // 2. IDEMPOTENCY GUARD: If already watching an Asset folder, block root-level hijacking attempts.
-        if (_watcher != null)
+        lock (_lifecycleLock)
         {
-            if (_root.EndsWith("Assets", StringComparison.OrdinalIgnoreCase) && !targetRoot.EndsWith("Assets", StringComparison.OrdinalIgnoreCase))
+            if (_watcher != null)
             {
-                Logger.LogWarning($"AssetDatabase already initialized on explicit directory context: {_root}. Intercepted and blocked lower-priority root clobber request targeting: {targetRoot}");
+                Logger.LogTrace(
+                    $"Init no-op: AssetDatabase already running against '{_root}'. " +
+                    $"Ignoring bootstrap request for '{rootPath}'.");
                 return;
             }
-
-            Logger.LogInfo($"Re-routing asset workspace context. Cleaning up old watch loop targeting: {_root}");
-            _watcher.EnableRaisingEvents = false;
-            _watcher.Dispose();
-            _watcher = null;
         }
 
-        _root = targetRoot;
-        Logger.LogInfo($"Initializing root tracking path: {_root}");
-        ImportFolder(_root); 
-        
-        AttachFileWatcher();
+        // No watcher yet — this is genuinely the first init, do the real work.
+        Reinitialize(rootPath, isExplicitRootChange: false);
     }
 
-    public void UpdatePath(string rootPath)
+    // UpdatePath is an explicit, intentional root change (e.g. user switches
+    // projects in the editor). It always re-roots, unless the currently active
+    // root was itself set via an explicit call and the new target looks like a
+    // less-specific/parent path — that case is still rejected and logged, since
+    // it's most likely an accidental clobber rather than an intentional switch.
+    public void UpdatePath(string rootPath) => Reinitialize(rootPath, isExplicitRootChange: true);
+
+    private void Reinitialize(string rootPath, bool isExplicitRootChange)
     {
         var targetRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath));
 
-        if (_watcher != null)
+        lock (_lifecycleLock)
         {
-            if (_root.EndsWith("Assets", StringComparison.OrdinalIgnoreCase) && !targetRoot.EndsWith("Assets", StringComparison.OrdinalIgnoreCase))
+            if (_watcher != null)
             {
-                Logger.LogWarning($"AssetDatabase already initialized on explicit directory context: {_root}. Intercepted and blocked lower-priority root clobber request targeting: {targetRoot}");
-                return;
+                if (isExplicitRootChange &&
+                    _root.EndsWith("Assets", StringComparison.OrdinalIgnoreCase) &&
+                    !targetRoot.EndsWith("Assets", StringComparison.OrdinalIgnoreCase))
+                {
+                    Logger.LogWarning(
+                        $"AssetDatabase already initialized on explicit directory context: {_root}. " +
+                        $"Intercepted and blocked lower-priority root clobber request targeting: {targetRoot}");
+                    return;
+                }
+
+                Logger.LogInfo($"Re-routing asset workspace context. Cleaning up old watch loop targeting: {_root}");
+                _watcher.EnableRaisingEvents = false;
+                _watcher.Dispose();
+                _watcher = null;
             }
 
-            Logger.LogInfo($"Re-routing asset workspace context. Cleaning up old watch loop targeting: {_root}");
-            _watcher.EnableRaisingEvents = false;
-            _watcher.Dispose();
-            _watcher = null;
+            _assets.Clear();
+            _dirtyFiles.Clear();
+            _root = targetRoot;
+
+            Logger.LogInfo($"Initializing root tracking path: {_root}");
+            ImportFolder(_root);
+            AttachFileWatcher();
         }
-        _assets.Clear();
-        _dirtyFiles.Clear();
-        _root = targetRoot;
-        Logger.LogInfo($"Initializing root tracking path: {_root}");
-        ImportFolder(_root);
-        AttachFileWatcher();
     }
 
     private void AttachFileWatcher()
     {
+        // Caller must hold _lifecycleLock.
         var filter = OperatingSystem.IsLinux() ? "*" : "*.*";
 
-        _watcher = new FileSystemWatcher(_root, filter)
+        var watcher = new FileSystemWatcher(_root, filter)
         {
             IncludeSubdirectories = true,
-            // Catch every relevant bit configuration including sizing changes for atomic write cycles
-            NotifyFilter = NotifyFilters.LastWrite 
-                           | NotifyFilters.FileName 
-                           | NotifyFilters.DirectoryName 
+            NotifyFilter = NotifyFilters.LastWrite
+                           | NotifyFilters.FileName
+                           | NotifyFilters.DirectoryName
                            | NotifyFilters.CreationTime
                            | NotifyFilters.Size,
-            EnableRaisingEvents = true
         };
 
-        _watcher.Changed += (_, e) => { Logger.LogTrace($"OS CHANGED event caught: {e.FullPath}"); UpdateAssetMetadata(e.FullPath); };
-        _watcher.Created += (_, e) => { Logger.LogTrace($"OS CREATED event caught: {e.FullPath}"); UpdateAssetMetadata(e.FullPath); };
-        _watcher.Deleted += (_, e) => { Logger.LogTrace($"OS DELETED event caught: {e.FullPath}"); OnDeleted(e.FullPath); };
-        _watcher.Renamed += (_, e) => 
-        { 
-            Logger.LogTrace($"OS RENAMED event caught: {e.OldFullPath} -> {e.FullPath}"); 
-            OnDeleted(e.OldFullPath); 
-            UpdateAssetMetadata(e.FullPath); 
+        watcher.Changed += (_, e) => { Logger.LogTrace($"OS CHANGED event caught: {e.FullPath}"); UpdateAssetMetadata(e.FullPath); };
+        watcher.Created += (_, e) => { Logger.LogTrace($"OS CREATED event caught: {e.FullPath}"); UpdateAssetMetadata(e.FullPath); };
+        watcher.Deleted += (_, e) => { Logger.LogTrace($"OS DELETED event caught: {e.FullPath}"); OnDeleted(e.FullPath); };
+        watcher.Renamed += (_, e) =>
+        {
+            Logger.LogTrace($"OS RENAMED event caught: {e.OldFullPath} -> {e.FullPath}");
+            OnDeleted(e.OldFullPath);
+            UpdateAssetMetadata(e.FullPath);
         };
+
+        watcher.EnableRaisingEvents = true;
+        _watcher = watcher;
 
         Logger.LogSuccess($"FileSystemWatcher successfully initialized and listening on: {_root}");
     }
 
     private void OnDeleted(string absolutePath)
     {
-        var relative = Path.GetRelativePath(_root, absolutePath);
-        if (!_assets.Remove(relative)) return;
+        var root = _root;
+        var relative = Path.GetRelativePath(root, absolutePath);
+        if (!_assets.TryRemove(relative, out _)) return;
+
         Logger.LogTrace($"Processing deletion. Removed tracking context for path: {relative}");
         Event<AssetRemoved>.Invoke(new AssetRemoved(relative));
     }
@@ -138,12 +166,13 @@ public class AssetDatabase
     {
         return _dirtyFiles.TryDequeue(out var path) ? new FileResult(true, path) : new FileResult(false, null);
     }
-    
+
     public void UpdateAssetMetadata(string absolutePath)
     {
         if (Directory.Exists(absolutePath)) return;
 
-        var relative = Path.GetRelativePath(_root, absolutePath);
+        var root = _root;
+        var relative = Path.GetRelativePath(root, absolutePath);
         var ext = Path.GetExtension(absolutePath.AsSpan());
 
         if (!TryGetAssetType(ext, out var type))
@@ -151,15 +180,15 @@ public class AssetDatabase
             Logger.LogTrace($"Ignoring asset with unknown extension: {absolutePath}");
             return;
         }
-        
+
         var info = new AssetInfo(relative, absolutePath, type);
         _assets[relative] = info;
         _dirtyFiles.Enqueue(absolutePath);
-        
+
         Logger.LogSuccess($"Asset cache updated/added. Type: {type} | Path: {relative}");
         Event<AssetUpdated>.Invoke(new AssetUpdated(info));
     }
-    
+
     private static bool TryGetAssetType(ReadOnlySpan<char> extension, out AssetType type)
     {
         var lookup = FastMap.GetAlternateLookup<ReadOnlySpan<char>>();
@@ -168,6 +197,9 @@ public class AssetDatabase
 
     public void ImportFolder(string rootPath)
     {
+        // Caller must hold _lifecycleLock (or accept the collection may be
+        // concurrently mutated by watcher events for a root that isn't fully
+        // swapped in yet).
         Logger.LogInfo($"Performing cold folder scan on: {rootPath}");
         var options = new EnumerationOptions { RecurseSubdirectories = true };
         var lookup = FastMap.GetAlternateLookup<ReadOnlySpan<char>>();
@@ -182,13 +214,12 @@ public class AssetDatabase
 
                 var ext = Path.GetExtension(entry.FileName);
                 if (!lookup.TryGetValue(ext, out var type)) return true;
-                
+
                 var fullPath = entry.ToFullPath();
                 var relative = fullPath[rootLen..];
-                
-                var lastWrite = entry.LastWriteTimeUtc.DateTime;
+
                 var info = new AssetInfo(relative, fullPath, type);
-                
+
                 _assets[relative] = info;
                 count++;
                 return true;
@@ -204,9 +235,17 @@ public class AssetDatabase
         _dirtyFiles.Enqueue(path);
     }
 
-    public ref readonly AssetInfo GetAsset(string relativePath)
+    // Returning by value instead of `ref readonly`: a ConcurrentDictionary
+    // gives no stable internal storage to point a ref at, and a torn/dangling
+    // ref into a concurrently-mutated collection is worse than a copy.
+    public bool TryGetAsset(string relativePath, out AssetInfo info) =>
+        _assets.TryGetValue(relativePath, out info);
+
+    public AssetInfo GetAsset(string relativePath)
     {
-        return ref CollectionsMarshal.GetValueRefOrNullRef(_assets, relativePath);
+        return _assets.TryGetValue(relativePath, out var info)
+            ? info
+            : throw new KeyNotFoundException($"No asset tracked for path: {relativePath}");
     }
 
     public string GetRootPath() => _root;
