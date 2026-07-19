@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Engine;
+using HarpyEngine.Rendering.Voxel;
 
 namespace HarpyEngine.Sandbox.Editor.Models;
 
@@ -11,6 +12,8 @@ public record PropertyChangedEvent(object Sender, string PropertyName) : IEvent;
 public record ApplyRequestedEvent(HierarchyEntry Entry) : IEvent;
 public record AddTransformRequestedEvent(HierarchyEntry Entry) : IEvent;
 public record RemoveTransformRequestedEvent(HierarchyEntry Entry) : IEvent;
+public record AddVoxelBlockRequestedEvent(HierarchyEntry Entry) : IEvent;
+public record RemoveVoxelBlockRequestedEvent(HierarchyEntry Entry) : IEvent;
 
 // ============================================================================
 // Inspector View Model
@@ -31,16 +34,20 @@ public sealed class InspectorViewModel : INotifyPropertyChanged
     public string ScaleY             { get => field; set => Set(ref field, value); } = "1";
     public string ScaleZ             { get => field; set => Set(ref field, value); } = "1";
     public bool HasTransform         { get => field; private set => Set(ref field, value); }
+    public bool HasVoxelBlock        { get => field; private set => Set(ref field, value); }
+    public string VoxelBlockType     { get => field; private set => Set(ref field, value); } = "";
     public string Status             { get => field; private set => Set(ref field, value); } = "-";
 
     // ------------------------------------------------------------------------
     // Public Operations / Methods
     // ------------------------------------------------------------------------
-    public void SetSelection(HierarchyEntry entry, bool hasTransform, Transform? transform)
+    public void SetSelection(HierarchyEntry entry, bool hasTransform, Transform? transform, bool hasVoxelBlock = false, BlockType voxelBlockType = BlockType.Air)
     {
         _selectedEntry = entry;
         SelectedEntityName = entry.Name;
         HasTransform = hasTransform;
+        HasVoxelBlock = hasVoxelBlock;
+        VoxelBlockType = hasVoxelBlock ? voxelBlockType.ToString() : "";
         Status = "-";
 
         if (transform is { } t)
@@ -68,6 +75,8 @@ public sealed class InspectorViewModel : INotifyPropertyChanged
         _selectedEntry = null;
         SelectedEntityName = "No entity selected";
         HasTransform = false;
+        HasVoxelBlock = false;
+        VoxelBlockType = "";
         Status = "-";
     }
 
@@ -106,6 +115,18 @@ public sealed class InspectorViewModel : INotifyPropertyChanged
     {
         if (_selectedEntry is null) return;
         Event<RemoveTransformRequestedEvent>.Invoke(new(_selectedEntry));
+    }
+
+    public void AddVoxelBlock()
+    {
+        if (_selectedEntry is null) return;
+        Event<AddVoxelBlockRequestedEvent>.Invoke(new(_selectedEntry));
+    }
+
+    public void RemoveVoxelBlock()
+    {
+        if (_selectedEntry is null) return;
+        Event<RemoveVoxelBlockRequestedEvent>.Invoke(new(_selectedEntry));
     }
 
     public void SetStatus(string message)

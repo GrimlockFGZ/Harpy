@@ -1,15 +1,13 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading;
 using Avalonia;
 using Avalonia.Input;
 using Avalonia.OpenGL;
 using Avalonia.OpenGL.Controls;
 using Avalonia.Rendering;
 using Avalonia.Threading;
+using Avalonia.Controls;
 using Engine;
-using Engine.Core; // Access our global Event<T> bus
+using Engine.Core; 
 using HarpyEngine.Rendering.Helios;
 using HarpyEngine.Sandbox.Editor.Models;
 using Silk.NET.OpenGL;
@@ -22,12 +20,8 @@ public class HarpyViewport : OpenGlControlBase, ICustomHitTest
     private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
     private double _lastTime;
 
-    // --- Camera control state ---
-    // NOTE: pointer/keyboard callbacks fire on the UI thread, but OnOpenGlRender runs on
-    // a dedicated render thread (Avalonia does not synchronize the two), so all shared
-    // input state below is guarded by _inputLock rather than touched directly.
-    private const float MoveSpeed = 3f; // world units / second
-    private const float LookSensitivity = 0.005f; // radians / pixel
+    private const float MoveSpeed = 3f; 
+    private const float LookSensitivity = 0.005f; 
     private readonly Lock _inputLock = new();
     private bool _isLooking;
     private Point _lastPointerPosition;
@@ -35,25 +29,27 @@ public class HarpyViewport : OpenGlControlBase, ICustomHitTest
     private float _pendingPitchDelta;
     private readonly HashSet<Key> _keysDown = [];
 
-    // Store subscription tokens so we can disconnect safely if the viewport unloads
     private IDisposable? _propChangeSub;
     private IDisposable? _applySub;
 
     public int TriangleInstanceCount { get; set; }
 
+    private Registry? _pendingRegistry;
+
+    public void SetRegistry(Registry registry)
+    {
+        _pendingRegistry = registry;
+        if (_renderer is not null)
+            _renderer.SetRegistry(registry);
+    }
+
     public HarpyViewport()
     {
         Focusable = true;
-
-        // Subscribe to our global event channels
         _propChangeSub = Event<PropertyChangedEvent>.Subscribe(OnGlobalPropertyChanged);
         _applySub = Event<ApplyRequestedEvent>.Subscribe(OnGlobalApplyRequested);
     }
 
-    /// <summary>
-    /// Ensures Avalonia routes pointer events to this control; OpenGlControlBase's
-    /// default hit-testing can otherwise miss the surface. See AvaloniaUI/Avalonia#10812.
-    /// </summary>
     bool ICustomHitTest.HitTest(Point point) => Bounds.WithX(0).WithY(0).Contains(point);
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
@@ -95,7 +91,6 @@ public class HarpyViewport : OpenGlControlBase, ICustomHitTest
             var deltaY = (float)(current.Y - _lastPointerPosition.Y);
             _lastPointerPosition = current;
 
-            // Accumulate; the render thread consumes and clears this each frame.
             _pendingYawDelta += deltaX * LookSensitivity;
             _pendingPitchDelta += -deltaY * LookSensitivity;
         }
@@ -113,12 +108,6 @@ public class HarpyViewport : OpenGlControlBase, ICustomHitTest
         lock (_inputLock) { _keysDown.Remove(e.Key); }
     }
 
-    /// <summary>
-    /// Applies accumulated look input and WASD/Q/E movement relative to the camera's
-    /// current facing. Called once per rendered frame (on the render thread) so movement
-    /// speed is frame-rate independent. All camera mutation happens here, and only here,
-    /// so the Camera itself never needs its own locking.
-    /// </summary>
     private void ApplyCameraMovement(float deltaTime)
     {
         if (_renderer is null) return;
@@ -165,11 +154,9 @@ public class HarpyViewport : OpenGlControlBase, ICustomHitTest
 
     private void OnGlobalPropertyChanged(PropertyChangedEvent evt)
     {
-        // If the inspector modifies any coordinate data, request a new OpenGL frame
         if (evt.Sender is InspectorViewModel && 
             (evt.PropertyName.StartsWith("Position") || evt.PropertyName.StartsWith("Scale")))
         {
-            // Forces Avalonia's render loop to call OnOpenGlRender on the UI thread
             Dispatcher.UIThread.Post(RequestNextFrameRendering, DispatcherPriority.Render);
         }
     }
@@ -181,37 +168,70 @@ public class HarpyViewport : OpenGlControlBase, ICustomHitTest
 
     protected override void OnOpenGlInit(GlInterface gl)
     {
-        var silkGl = GL.GetApi(gl.GetProcAddress);
-        var context = new GlContext(silkGl);
-        _renderer = new HarpyRenderer(context);
-        _renderer.Init();
+        try
+        {
+            var silkGl = GL.GetApi(gl.GetProcAddress);
+            var context = new GlContext(silkGl);
+            _renderer = new HarpyRenderer(context);
+        
+            // If anything in here throws (like file not found for shaders), we catch it
+            _renderer.Init(); 
+        
+            if (_pendingRegistry is not null)
+                _renderer.SetRegistry(_pendingRegistry);
+            
+            Console.WriteLine("[OPENGL] Initialization Successful!");
+        }
+        catch (Exception ex)
+        {
+            // Put a breakpoint here! 
+            Console.WriteLine($"[CRITICAL] OpenGL Init Crashed: {ex.Message}\n{ex.StackTrace}");
+            Debug.WriteLine($"[CRITICAL] OpenGL Init Crashed: {ex.Message}");
+        }
     }
 
     protected override void OnOpenGlRender(GlInterface gl, int fb)
     {
         var silkGl = GL.GetApi(gl.GetProcAddress);
+    
+        // 1. Bind the buffer and set the viewport using the SCALED dimensions
         silkGl.BindFramebuffer(FramebufferTarget.Framebuffer, (uint)fb);
+    
+        var scaling = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1.0;
+        var fbWidth = (uint)(Bounds.Width * scaling);
+        var fbHeight = (uint)(Bounds.Height * scaling);
+        silkGl.Viewport(0, 0, fbWidth, fbHeight);
 
-        silkGl.Viewport(0, 0, (uint)Bounds.Width, (uint)Bounds.Height);
+        // 2. Clear ONCE
+        silkGl.ClearColor(1.0f, 0.0f, 1.0f, 1.0f); // Hot Pink
+        silkGl.Clear((uint)ClearBufferMask.ColorBufferBit);
 
+        // 3. Update time and logic
         var now = _stopwatch.Elapsed.TotalSeconds;
         var delta = now - _lastTime;
         _lastTime = now;
-
         ApplyCameraMovement((float)delta);
 
-        _renderer?.TriangleInstanceCount = Math.Max(0, TriangleInstanceCount);
-
-        var aspectRatio = Bounds.Height > 0 ? (float)(Bounds.Width / Bounds.Height) : 1f;
-        _renderer?.Render(delta, false, aspectRatio);
+        // 4. Render
+        if (_renderer != null)
+        {
+            _renderer.TriangleInstanceCount = Math.Max(0, TriangleInstanceCount);
+            var aspectRatio = fbHeight > 0 ? (float)fbWidth / fbHeight : 1f;
+        
+            // Ensure this method does NOT call glClear again!
+            _renderer.Render(delta, false, aspectRatio);
+        }
     
-        // Keep rendering loop running smoothly
+        // 5. Diagnostics
+        var error = silkGl.GetError();
+        if (error != GLEnum.NoError)
+        {
+            Console.WriteLine($"[GL ERROR] {error}");
+        }
+        // Keep the loop going
         Dispatcher.UIThread.Post(RequestNextFrameRendering, DispatcherPriority.Render);
     }
 
-    /// <summary>
-    /// Ensure we clean up static event bus bindings when the control detaches from the visual tree
-    /// </summary>
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);

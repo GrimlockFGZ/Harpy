@@ -31,8 +31,11 @@ public class Shader
         _gl = gl;
         _vPath = vertexPath;
         _fPath = fragmentPath;
-        Reload();
+    
+        // Simply trigger the load. Handle is updated inside here.
+        Reload(); 
     }
+    
 
     /// <summary>
     /// Sets this shader program as the active program in the OpenGL context.
@@ -56,9 +59,8 @@ public class Shader
         }
     }
 
-    /// <summary>
-    /// Reloads the shader program by recompiling and relinking the source files from disk.
-    /// </summary>
+
+
     public void Reload()
     {
         try
@@ -74,25 +76,29 @@ public class Shader
             _gl.Api.GetProgram(newHandle, ProgramPropertyARB.LinkStatus, out var status);
             if (status == 0)
             {
-                Logger.LogError($"[Shader Error] Link Fail: {_gl.Api.GetProgramInfoLog(newHandle)}");
+                // This is the real check. If this logs anything, your GLSL has a syntax error.
+                var log = _gl.Api.GetProgramInfoLog(newHandle);
+                Logger.LogError($"[Shader Error] Link Fail: {log}");
                 _gl.Api.DeleteProgram(newHandle);
                 return;
             }
 
-            // Successfully linked, now swap
+            // Successfully linked
             if (Handle != 0) _gl.Api.DeleteProgram(Handle);
             Handle = newHandle;
 
+            _gl.Api.DetachShader(newHandle, vertex);
+            _gl.Api.DetachShader(newHandle, fragment);
             _gl.Api.DeleteShader(vertex);
             _gl.Api.DeleteShader(fragment);
+        
             Logger.LogSuccess($"Reloaded: {Path.GetFileName(_vPath)}");
         }
-        catch (ResourceNotFoundException ex)
+        catch (Exception ex)
         {
-            Logger.LogFatal($"[Shader Error] {ex.Message}");
+            Logger.LogFatal($"[Shader Error] Failed to (re)load: {ex.Message}");
         }
     }
-
     /// <summary>
     /// Compiles a single shader stage.
     /// </summary>

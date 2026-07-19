@@ -1,17 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # ============================================================================
-# Local CI Pipeline Configurations
+# Harpy Engine — Build Script
+#
+# Usage:
+#   ./build.sh [config]
+#
+# Configurations:
+#   debug      — Framework-dependent debug build (fast, no AOT)
+#   release    — Framework-dependent release build (optimised, no AOT)
+#   dist       — NativeAOT publish for linux-x64 (slow, self-contained)
+#   test       — Run Engine.Tests only (debug, no publish)
+#
+# Default: release
 # ============================================================================
+CONFIG="${1:-release}"
 SOLUTION="HarpyEngine.slnx"
 PROJECT_NAME="Sandbox"
-CONFIGURATION="Release"
 OUTPUT_DIR="./local-ci-artifacts"
 RESTORE_STAMP_DIR="./.build-cache"
 RESTORE_STAMP="${RESTORE_STAMP_DIR}/restore.sha256"
 
-# Detect available cores so restore/build/publish all fan out across them
-# instead of running single-threaded (works on Linux, macOS, and WSL).
+# Detect available cores
 if command -v nproc &> /dev/null; then
     CPU_CORES=$(nproc)
 elif command -v sysctl &> /dev/null; then
@@ -21,82 +31,167 @@ else
 fi
 MSBUILD_PARALLEL_ARGS=(-m:"$CPU_CORES" -p:UseSharedCompilation=true)
 
-echo "=================================================================="
-echo "Harpy build"
-echo "=================================================================="
-
 # ----------------------------------------------------------------------------
-# Rider's bundled terminal doesn't inherit the shell PATH, so dotnet
-# often isn't found even when it's installed. Fall back to known locations.
+# dotnet PATH fallback (Rider terminal isolation)
 # ----------------------------------------------------------------------------
 if ! command -v dotnet &> /dev/null; then
-    echo "dotnet not found on PATH."
-
-    # Check your specific local home directory installation path
     LOCAL_DOTNET="$HOME/.dotnet"
-
     if [ -f "$LOCAL_DOTNET/dotnet" ]; then
-        echo "Detected local SDK at $LOCAL_DOTNET. Injecting paths..."
         export DOTNET_ROOT="$LOCAL_DOTNET"
         export PATH="${PATH}:${LOCAL_DOTNET}"
-    # Fallback to standard Arch system path just in case
     elif [ -f "/usr/share/dotnet/dotnet" ]; then
-        echo "Detected system SDK at /usr/share/dotnet. Injecting paths..."
         export DOTNET_ROOT="/usr/share/dotnet"
         export PATH="${PATH}:${DOTNET_ROOT}"
     else
         echo "Error: .NET SDK could not be found anywhere."
-        echo "Rider console is isolated. Please run this script in an external terminal."
         exit 1
     fi
 fi
 
-# Fresh cleanup of previous artifacts (restore cache is kept on purpose)
-rm -rf "$OUTPUT_DIR"
-mkdir -p "$OUTPUT_DIR/linux-x64"
-mkdir -p "$RESTORE_STAMP_DIR"
+# ----------------------------------------------------------------------------
+# Shared: smart restore (skip if nothing changed)
+# ----------------------------------------------------------------------------
+do_restore() {
+    local runtime_flag="${1:-}"
+    mkdir -p "$RESTORE_STAMP_DIR"
+    mapfile -t RESTORE_INPUTS < <(find . \
+        \( -name "*.csproj" -o -name "*.slnx" -o -name "Directory.Build.props" -o -name "packages.lock.json" \) \
+        -not -path "*/bin/*" -not -path "*/obj/*" -not -path "${OUTPUT_DIR}/*" | sort)
+
+    CURRENT_HASH=$(cat "${RESTORE_INPUTS[@]}" 2>/dev/null | sha256sum | cut -d' ' -f1)
+    PREVIOUS_HASH=""
+    [ -f "$RESTORE_STAMP" ] && PREVIOUS_HASH=$(cat "$RESTORE_STAMP")
+
+    if [ "$CURRENT_HASH" = "$PREVIOUS_HASH" ]; then
+        echo "Restore: no changes detected, skipping."
+    else
+        echo "Restore: project files changed, restoring..."
+        dotnet restore "$SOLUTION" ${runtime_flag:+-r "$runtime_flag"} -v q "${MSBUILD_PARALLEL_ARGS[@]}"
+        echo "$CURRENT_HASH" > "$RESTORE_STAMP"
+    fi
+}
+
+# ============================================================================
+case "$CONFIG" in
 
 # ----------------------------------------------------------------------------
-# Step 1: restore, skipped if csproj/slnx/props haven't changed since last run
+# debug — fast framework-dependent debug build, launches the editor
 # ----------------------------------------------------------------------------
-echo "[1/2] Dependency restore, ${CPU_CORES} core(s)"
-mapfile -t RESTORE_INPUTS < <(find . \
-    \( -name "*.csproj" -o -name "*.slnx" -o -name "Directory.Build.props" -o -name "packages.lock.json" \) \
-    -not -path "*/bin/*" -not -path "*/obj/*" -not -path "${OUTPUT_DIR}/*" | sort)
+debug)
+    echo "=================================================================="
+    echo " Harpy — DEBUG build"
+    echo "=================================================================="
+    do_restore
 
-CURRENT_HASH=$(cat "${RESTORE_INPUTS[@]}" 2>/dev/null | sha256sum | cut -d' ' -f1)
-PREVIOUS_HASH=""
-[ -f "$RESTORE_STAMP" ] && PREVIOUS_HASH=$(cat "$RESTORE_STAMP")
+    OUT="$OUTPUT_DIR/debug"
+    rm -rf "$OUT" && mkdir -p "$OUT"
 
-if [ "$CURRENT_HASH" = "$PREVIOUS_HASH" ]; then
-    echo "No changes to project/solution files since last restore, skipping."
-else
-    echo "Project files changed (or first run), restoring..."
-    # ADDED: -r linux-x64 tells NuGet to generate the NativeAOT asset targets!
-    dotnet restore "$SOLUTION" -r linux-x64 -v q "${MSBUILD_PARALLEL_ARGS[@]}"
-    echo "$CURRENT_HASH" > "$RESTORE_STAMP"
-fi
+    echo "[1/2] Build (Debug, ${CPU_CORES} core(s))"
+    dotnet build "Sandbox/${PROJECT_NAME}.csproj" \
+        -c Debug \
+        -o "$OUT" \
+        --no-restore \
+        -v q \
+        "${MSBUILD_PARALLEL_ARGS[@]}"
+
+    mkdir -p "$OUT/Assets"
+    cp -r "./Assets/." "$OUT/Assets/" 2>/dev/null || true
+
+    echo "=================================================================="
+    echo " Build complete: $OUT"
+    echo "=================================================================="
+    "$OUT/Sandbox"
+    ;;
 
 # ----------------------------------------------------------------------------
-# Step 2: NativeAOT publish
+# release — optimised framework-dependent build, launches the editor
 # ----------------------------------------------------------------------------
-echo "[2/2] NativeAOT publish, ${CPU_CORES} core(s)"
-dotnet publish "Sandbox/${PROJECT_NAME}.csproj" \
-    -c "$CONFIGURATION" \
-    -r "linux-x64" \
-    -o "$OUTPUT_DIR/linux-x64" \
-    --no-restore \
-    -v q \
-    "${MSBUILD_PARALLEL_ARGS[@]}" \
-    /p:PublishAot=true
+release)
+    echo "=================================================================="
+    echo " Harpy — RELEASE build"
+    echo "=================================================================="
+    do_restore
 
-# Copy Assets and strip symbols for local package
-mkdir -p "$OUTPUT_DIR/linux-x64/Assets"
-cp -r "./Assets/." "$OUTPUT_DIR/linux-x64/Assets/" 2>/dev/null || true
-find "$OUTPUT_DIR/linux-x64" -name "*.pdb" -type f -delete || true
+    OUT="$OUTPUT_DIR/release"
+    rm -rf "$OUT" && mkdir -p "$OUT"
 
-echo "=================================================================="
-echo "Build complete: $OUTPUT_DIR/linux-x64"
-echo "=================================================================="
+    echo "[1/2] Build (Release, ${CPU_CORES} core(s))"
+    dotnet build "Sandbox/${PROJECT_NAME}.csproj" \
+        -c Release \
+        -o "$OUT" \
+        --no-restore \
+        -v q \
+        "${MSBUILD_PARALLEL_ARGS[@]}"
 
-./local-ci-artifacts/linux-x64/Sandbox
+    mkdir -p "$OUT/Assets"
+    cp -r "./Assets/." "$OUT/Assets/" 2>/dev/null || true
+
+    echo "=================================================================="
+    echo " Build complete: $OUT"
+    echo "=================================================================="
+    "$OUT/Sandbox"
+    ;;
+
+# ----------------------------------------------------------------------------
+# dist — NativeAOT self-contained publish for linux-x64 (slow)
+# ----------------------------------------------------------------------------
+dist)
+    echo "=================================================================="
+    echo " Harpy — DIST (NativeAOT) publish"
+    echo "=================================================================="
+    do_restore "linux-x64"
+
+    OUT="$OUTPUT_DIR/linux-x64"
+    rm -rf "$OUT" && mkdir -p "$OUT"
+
+    echo "[1/2] NativeAOT publish (Release, ${CPU_CORES} core(s))"
+    dotnet publish "Sandbox/${PROJECT_NAME}.csproj" \
+        -c Release \
+        -r linux-x64 \
+        -o "$OUT" \
+        --no-restore \
+        -v q \
+        "${MSBUILD_PARALLEL_ARGS[@]}" \
+        /p:PublishAot=true
+
+    mkdir -p "$OUT/Assets"
+    cp -r "./Assets/." "$OUT/Assets/" 2>/dev/null || true
+    find "$OUT" -name "*.pdb" -type f -delete || true
+
+    echo "=================================================================="
+    echo " Publish complete: $OUT"
+    echo "=================================================================="
+    "$OUT/Sandbox"
+    ;;
+
+# ----------------------------------------------------------------------------
+# test — build and run Engine.Tests, no publish
+# ----------------------------------------------------------------------------
+test)
+    echo "=================================================================="
+    echo " Harpy — TEST run"
+    echo "=================================================================="
+    do_restore
+
+    echo "[1/1] dotnet test (Debug, ${CPU_CORES} core(s))"
+    dotnet test "Engine.Tests/Engine.Tests.csproj" \
+        -c Debug \
+        --no-restore \
+        -v normal \
+        "${MSBUILD_PARALLEL_ARGS[@]}"
+
+    echo "=================================================================="
+    echo " Tests complete."
+    echo "=================================================================="
+    ;;
+
+# ----------------------------------------------------------------------------
+# unknown
+# ----------------------------------------------------------------------------
+*)
+    echo "Unknown configuration: '$CONFIG'"
+    echo ""
+    echo "Usage: ./build.sh [debug|release|dist|test]"
+    exit 1
+    ;;
+esac

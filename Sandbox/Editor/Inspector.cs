@@ -37,5 +37,15 @@ namespace HarpyEngine.Sandbox.Editor
         {
             ViewModel.RemoveTransform();
         }
+
+        private void OnAddVoxelBlockClick(object? sender, RoutedEventArgs e)
+        {
+            ViewModel.AddVoxelBlock();
+        }
+
+        private void OnRemoveVoxelBlockClick(object? sender, RoutedEventArgs e)
+        {
+            ViewModel.RemoveVoxelBlock();
+        }
     }
 }

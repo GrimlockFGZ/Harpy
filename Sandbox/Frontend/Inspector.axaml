@@ -148,6 +148,46 @@
                 </Grid>
             </Border>
 
+            <!-- VoxelBlock Component -->
+            <Border BorderBrush="#1e1e1e" BorderThickness="0,0,0,1"
+                    IsVisible="{Binding HasVoxelBlock}">
+                <StackPanel>
+                    <Border Background="#181818"
+                            Padding="10,6"
+                            BorderBrush="#1e1e1e"
+                            BorderThickness="0,0,0,1">
+                        <Grid ColumnDefinitions="Auto, *, Auto, Auto">
+                            <!-- Orange accent for VoxelBlock -->
+                            <Rectangle Grid.Column="0"
+                                       Width="3" Height="10"
+                                       Fill="#e07840"
+                                       RadiusX="2" RadiusY="2"
+                                       Margin="0,0,8,0"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Classes="ComponentTitle" Text="VoxelBlock"/>
+                            <Border Grid.Column="2" Classes="ComponentBadge" Margin="0,0,6,0">
+                                <TextBlock Classes="ComponentBadgeText" Text="component"/>
+                            </Border>
+                            <Button Grid.Column="3"
+                                    Classes="RemoveComp"
+                                    Content="✕"
+                                    Click="OnRemoveVoxelBlockClick"
+                                    ToolTip.Tip="Remove VoxelBlock"/>
+                        </Grid>
+                    </Border>
+                    <Border Padding="10,8">
+                        <Grid ColumnDefinitions="56, *">
+                            <TextBlock Grid.Column="0" Classes="Label" Text="Type" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1"
+                                       FontSize="10"
+                                       Foreground="#cccccc"
+                                       Text="{Binding VoxelBlockType}"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
+
             <!-- Transform Component -->
             <Border BorderBrush="#1e1e1e" BorderThickness="0,0,0,1">
                 <StackPanel>
@@ -292,6 +332,7 @@
                     <DropDownButton.Flyout>
                         <MenuFlyout Placement="BottomEdgeAlignedRight">
                             <MenuItem Header="Transform" Click="OnAddTransformClick"/>
+                            <MenuItem Header="VoxelBlock" Click="OnAddVoxelBlockClick"/>
                         </MenuFlyout>
                     </DropDownButton.Flyout>
                 </DropDownButton>
