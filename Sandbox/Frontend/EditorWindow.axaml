@@ -47,6 +47,8 @@
                 <MenuItem Header="Cut" HotKey="Ctrl+X"/>
                 <MenuItem Header="Copy" HotKey="Ctrl+C"/>
                 <MenuItem Header="Paste" HotKey="Ctrl+V"/>
+                <Separator/>
+                <MenuItem Header="Project Settings..." Click="OnProjectSettingsClicked"/>
             </MenuItem>
             <MenuItem Header="_Window">
                 <MenuItem Header="Hierarchy" IsChecked="True"/>

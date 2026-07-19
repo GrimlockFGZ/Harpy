@@ -137,6 +137,12 @@ namespace HarpyEngine.Sandbox.Editor
             }
         }
 
+        private void OnProjectSettingsClicked(object? sender, RoutedEventArgs e)
+        {
+            var dialog = new ProjectSettingsDialog();
+            dialog.ShowDialog(this);
+        }
+
         private void OnNewProjectClicked(object? sender, RoutedEventArgs e)
         {
             var dialog = new NewProjectDialog();
