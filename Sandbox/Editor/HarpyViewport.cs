@@ -28,6 +28,9 @@ public class HarpyViewport : OpenGlControlBase, ICustomHitTest
     private float _pendingYawDelta;
     private float _pendingPitchDelta;
     private readonly HashSet<Key> _keysDown = [];
+    private GL? _silkGl;
+    
+    private readonly Action _requestNextFrameAction;
 
     private IDisposable? _propChangeSub;
     private IDisposable? _applySub;
@@ -48,6 +51,7 @@ public class HarpyViewport : OpenGlControlBase, ICustomHitTest
         Focusable = true;
         _propChangeSub = Event<PropertyChangedEvent>.Subscribe(OnGlobalPropertyChanged);
         _applySub = Event<ApplyRequestedEvent>.Subscribe(OnGlobalApplyRequested);
+        _requestNextFrameAction = RequestNextFrameRendering;
     }
 
     bool ICustomHitTest.HitTest(Point point) => Bounds.WithX(0).WithY(0).Contains(point);
@@ -112,44 +116,44 @@ public class HarpyViewport : OpenGlControlBase, ICustomHitTest
     {
         if (_renderer is null) return;
 
-        Key[] keysSnapshot;
         float yawDelta, pitchDelta;
+        var move = Vector3.Zero;
+        var camera = _renderer.Camera;
+
         lock (_inputLock)
         {
-            keysSnapshot = _keysDown.Count > 0 ? [.. _keysDown] : [];
+            // Grab the pending rotation
             yawDelta = _pendingYawDelta;
             pitchDelta = _pendingPitchDelta;
             _pendingYawDelta = 0f;
             _pendingPitchDelta = 0f;
+
+            foreach (var key in _keysDown)
+            {
+                move += key switch
+                {
+                    Key.W => camera.Forward,
+                    Key.S => -camera.Forward,
+                    Key.D => camera.Right,
+                    Key.A => -camera.Right,
+                    Key.E => Vector3.Up,
+                    Key.Q => -Vector3.Up,
+                    _ => Vector3.Zero
+                };
+            }
         }
 
-        var camera = _renderer.Camera;
-
+        // Apply rotation
         if (yawDelta != 0f || pitchDelta != 0f)
         {
             camera.AddYawPitch(yawDelta, pitchDelta);
         }
 
-        if (keysSnapshot.Length == 0) return;
-
-        var move = Vector3.Zero;
-        foreach (var key in keysSnapshot)
+        // Apply translation
+        if (move != Vector3.Zero)
         {
-            move += key switch
-            {
-                Key.W => camera.Forward,
-                Key.S => -camera.Forward,
-                Key.D => camera.Right,
-                Key.A => -camera.Right,
-                Key.E => Vector3.Up,
-                Key.Q => -Vector3.Up,
-                _ => Vector3.Zero
-            };
+            camera.Position += move.Normalized() * (MoveSpeed * deltaTime);
         }
-
-        if (move == Vector3.Zero) return;
-
-        camera.Position += move.Normalized() * (MoveSpeed * deltaTime);
     }
 
     private void OnGlobalPropertyChanged(PropertyChangedEvent evt)
@@ -163,15 +167,14 @@ public class HarpyViewport : OpenGlControlBase, ICustomHitTest
 
     private void OnGlobalApplyRequested(ApplyRequestedEvent evt)
     {
-        Logger.LogInfo("Global Apply Requested:");
     }
 
     protected override void OnOpenGlInit(GlInterface gl)
     {
         try
         {
-            var silkGl = GL.GetApi(gl.GetProcAddress);
-            var context = new GlContext(silkGl);
+            _silkGl = GL.GetApi(gl.GetProcAddress);
+            var context = new GlContext(_silkGl);
             _renderer = new HarpyRenderer(context);
         
             // If anything in here throws (like file not found for shaders), we catch it
@@ -184,52 +187,54 @@ public class HarpyViewport : OpenGlControlBase, ICustomHitTest
         }
         catch (Exception ex)
         {
-            // Put a breakpoint here! 
             Console.WriteLine($"[CRITICAL] OpenGL Init Crashed: {ex.Message}\n{ex.StackTrace}");
-            Debug.WriteLine($"[CRITICAL] OpenGL Init Crashed: {ex.Message}");
         }
     }
 
+    int _frameCount;
+
     protected override void OnOpenGlRender(GlInterface gl, int fb)
     {
-        var silkGl = GL.GetApi(gl.GetProcAddress);
-    
-        // 1. Bind the buffer and set the viewport using the SCALED dimensions
-        silkGl.BindFramebuffer(FramebufferTarget.Framebuffer, (uint)fb);
-    
+        if (_silkGl is null) return;
+        _silkGl.BindFramebuffer(FramebufferTarget.Framebuffer, (uint)fb);
+
         var scaling = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1.0;
         var fbWidth = (uint)(Bounds.Width * scaling);
         var fbHeight = (uint)(Bounds.Height * scaling);
-        silkGl.Viewport(0, 0, fbWidth, fbHeight);
+        _silkGl.Viewport(0, 0, fbWidth, fbHeight);
 
-        // 2. Clear ONCE
-        silkGl.ClearColor(1.0f, 0.0f, 1.0f, 1.0f); // Hot Pink
-        silkGl.Clear((uint)ClearBufferMask.ColorBufferBit);
+        // Rule out state Avalonia might be leaving on
+        _silkGl.Disable(EnableCap.ScissorTest);
+        _silkGl.Disable(EnableCap.Blend);
+        _silkGl.Disable(EnableCap.DepthTest);
+        _silkGl.Disable(EnableCap.CullFace);
 
-        // 3. Update time and logic
+        _silkGl.ClearColor(1.0f, 0.0f, 1.0f, 1.0f);
+        _silkGl.Clear((uint)ClearBufferMask.ColorBufferBit);
+
         var now = _stopwatch.Elapsed.TotalSeconds;
         var delta = now - _lastTime;
         _lastTime = now;
         ApplyCameraMovement((float)delta);
 
-        // 4. Render
         if (_renderer != null)
         {
-            _renderer.TriangleInstanceCount = Math.Max(0, TriangleInstanceCount);
             var aspectRatio = fbHeight > 0 ? (float)fbWidth / fbHeight : 1f;
-        
-            // Ensure this method does NOT call glClear again!
             _renderer.Render(delta, false, aspectRatio);
         }
     
         // 5. Diagnostics
         var error = silkGl.GetError();
         if (error != GLEnum.NoError)
+
+        var error = _silkGl.GetError();
+        if (error != GLEnum.NoError) Console.WriteLine($"[GL ERROR] {error}");
+        
+        Dispatcher.UIThread.Post(_requestNextFrameAction, DispatcherPriority.Render);
         {
             Console.WriteLine($"[GL ERROR] {error}");
         }
-        // Keep the loop going
-        Dispatcher.UIThread.Post(RequestNextFrameRendering, DispatcherPriority.Render);
+        
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)

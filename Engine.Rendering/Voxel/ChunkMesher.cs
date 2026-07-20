@@ -1,3 +1,5 @@
+using Engine;
+
 namespace HarpyEngine.Rendering.Voxel;
 
 public static class ChunkMesher
@@ -9,9 +11,9 @@ public static class ChunkMesher
         ( 0,  0,  1), ( 0,  0, -1),
     ];
 
-    public static (float[] Vertices, uint[] Indices) Build(Chunk chunk)
+    public static (uint[] Vertices, uint[] Indices) Build(Chunk chunk)
     {
-        var verts   = new List<float>();
+        var verts   = new List<uint>();
         var indices = new List<uint>();
 
         for (var face = 0; face < 6; face++)
@@ -26,7 +28,7 @@ public static class ChunkMesher
     private static void GreedyFace(
         Chunk chunk, int face,
         int nx, int ny, int nz,
-        List<float> verts, List<uint> indices)
+        List<uint> verts, List<uint> indices)
     {
         int d, u, v;
         if (nx != 0) { d = 0; u = 1; v = 2; }
@@ -34,16 +36,18 @@ public static class ChunkMesher
         else              { d = 2; u = 0; v = 1; }
 
         var size = Chunk.Size;
-        var mask = new BlockType[size * size]; 
+        var mask = new BlockType[size * size];
 
         for (var slice = 0; slice < size; slice++)
         {
             for (var j = 0; j < size; j++)
             for (var i = 0; i < size; i++)
             {
+                // The current voxel being tested on the slice plane
                 var pos  = MakeCoord(d, u, v, slice, i, j);
-                var posN = MakeCoord(d, u, v, slice + nx + ny + nz, i, j); 
 
+                var posN = (int[])pos.Clone();
+                posN[d] += (nx != 0 ? nx : (ny != 0 ? ny : nz));
                 var block = InBounds(pos) ? chunk.Get(pos[0], pos[1], pos[2]) : BlockType.Air;
                 var neighbour = InBounds(posN) ? chunk.Get(posN[0], posN[1], posN[2]) : BlockType.Air;
 
@@ -89,32 +93,37 @@ public static class ChunkMesher
             }
         }
     }
-
+    
+    
     private static void EmitQuad(
-        List<float> verts, List<uint> indices,
+        List<uint> verts, List<uint> indices,
         int face, int d, int u, int v,
         int slice, int i, int j, int w, int h,
         int nx, int ny, int nz,
         BlockType type)
     {
-        var offset = (nx + ny + nz > 0) ? 1 : 0;
+        // Determine the axis-specific normal component to place the quad on the correct skin boundary
+        int normalComponent = (d == 0) ? nx : (d == 1) ? ny : nz;
+        var offset = (normalComponent > 0) ? 1 : 0;
 
         int[] p0 = MakeCoord(d, u, v, slice + offset, i,     j    );
         int[] p1 = MakeCoord(d, u, v, slice + offset, i + w, j    );
         int[] p2 = MakeCoord(d, u, v, slice + offset, i + w, j + h);
         int[] p3 = MakeCoord(d, u, v, slice + offset, i,     j + h);
 
-        var baseIndex = (uint)(verts.Count / 7);
-        
-        // FIX: Always append vertices in exact geometric order so indices dictate winding cleanly
-        AddVertex(verts, p0, nx, ny, nz, type);
-        AddVertex(verts, p1, nx, ny, nz, type);
-        AddVertex(verts, p2, nx, ny, nz, type);
-        AddVertex(verts, p3, nx, ny, nz, type);
+        var baseIndex = (uint)verts.Count;
 
-        if (nx + ny + nz > 0)
+        AddVertex(verts, p0, face, type);
+        AddVertex(verts, p1, face, type);
+        AddVertex(verts, p2, face, type);
+        AddVertex(verts, p3, face, type);
+
+        // Uniform winding correction: positive and negative faces require opposite index orders 
+        // to face outward correctly under standard OpenGL backface culling.
+        bool isPositive = (normalComponent > 0);
+
+        if (isPositive)
         {
-            // Standard Counter-Clockwise
             indices.Add(baseIndex + 0);
             indices.Add(baseIndex + 1);
             indices.Add(baseIndex + 2);
@@ -124,7 +133,6 @@ public static class ChunkMesher
         }
         else
         {
-            // Reversed Clockwise (Flips facing direction for negative axes)
             indices.Add(baseIndex + 0);
             indices.Add(baseIndex + 2);
             indices.Add(baseIndex + 1);
@@ -133,16 +141,16 @@ public static class ChunkMesher
             indices.Add(baseIndex + 2);
         }
     }
-
-    private static void AddVertex(List<float> verts, int[] p, int nx, int ny, int nz, BlockType type)
+    private static void AddVertex(List<uint> verts, int[] p, int face, BlockType type)
     {
-        verts.Add(p[0]);
-        verts.Add(p[1]);
-        verts.Add(p[2]);
-        verts.Add(nx);
-        verts.Add(ny);
-        verts.Add(nz);
-        verts.Add((float)type);
+        // TODO: wire up real per-vertex lighting; full-bright (15) for now
+        var vertex = new PackedVertex(
+            (byte)p[0], (byte)p[1], (byte)p[2],
+            (byte)face,
+            (ushort)type,
+            lightLevel: 15);
+
+        verts.Add(vertex.Raw);
     }
 
     private static int[] MakeCoord(int d, int u, int v, int dVal, int uVal, int vVal)

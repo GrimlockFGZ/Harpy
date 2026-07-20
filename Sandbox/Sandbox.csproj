@@ -35,12 +35,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Content Include="..\Assets\fragment.glsl" CopyToOutputDirectory="PreserveNewest">
-        <Link>Assets\fragment.glsl</Link>
-      </Content>
-      <Content Include="..\Assets\vertex.glsl" CopyToOutputDirectory="PreserveNewest">
-        <Link>Assets\vertex.glsl</Link>
-      </Content>
       <Content Include="..\Assets\voxel_vertex.glsl" CopyToOutputDirectory="PreserveNewest">
         <Link>Assets\voxel_vertex.glsl</Link>
       </Content>

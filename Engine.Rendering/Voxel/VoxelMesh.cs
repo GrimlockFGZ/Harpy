@@ -5,7 +5,7 @@ namespace HarpyEngine.Rendering.Voxel;
 
 /// <summary>
 /// GPU mesh for a greedy-meshed chunk.
-/// Vertex layout (7 floats per vertex): X Y Z  NX NY NZ  BlockId
+/// Vertex layout: 1 packed uint per vertex (see PackedVertex).
 /// </summary>
 public sealed class VoxelMesh : IDisposable
 {
@@ -15,7 +15,7 @@ public sealed class VoxelMesh : IDisposable
     private readonly uint _ebo;
     private int _indexCount;
 
-    public VoxelMesh(GlContext gl, float[] vertices, uint[] indices)
+    public VoxelMesh(GlContext gl, uint[] vertices, uint[] indices)
     {
         _gl = gl;
         _indexCount = indices.Length;
@@ -27,49 +27,36 @@ public sealed class VoxelMesh : IDisposable
         gl.Api.BindVertexArray(_vao);
 
         gl.Api.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
-        gl.Api.BufferData(BufferTargetARB.ArrayBuffer, (ReadOnlySpan<float>)vertices, BufferUsageARB.StaticDraw);
+        gl.Api.BufferData(BufferTargetARB.ArrayBuffer, (ReadOnlySpan<uint>)vertices, BufferUsageARB.StaticDraw);
 
         gl.Api.BindBuffer(BufferTargetARB.ElementArrayBuffer, _ebo);
         gl.Api.BufferData(BufferTargetARB.ElementArrayBuffer, (ReadOnlySpan<uint>)indices, BufferUsageARB.StaticDraw);
 
-        const uint stride = 7 * sizeof(float);
-
-        // Location 0: position (vec3)
-        gl.Api.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, stride, 0);
+        // Single unsigned-int attribute, one component, 4 bytes/vertex.
+        // Use VertexAttribIPointer (the "I" matters) so it's read as an
+        // integer, not normalized/cast to float.
+        gl.Api.VertexAttribIPointer(0, 1, VertexAttribIType.UnsignedInt, sizeof(uint), 0);
         gl.Api.EnableVertexAttribArray(0);
-
-        // Location 1: normal (vec3)
-        gl.Api.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, stride, 3 * sizeof(float));
-        gl.Api.EnableVertexAttribArray(1);
-
-        // Location 2: block id (float)
-        gl.Api.VertexAttribPointer(2, 1, VertexAttribPointerType.Float, false, stride, 6 * sizeof(float));
-        gl.Api.EnableVertexAttribArray(2);
 
         gl.Api.BindVertexArray(0);
     }
 
-    /// <summary>Re-uploads new geometry without recreating the VAO.</summary>
-    public void Upload(float[] vertices, uint[] indices)
+    public void Upload(uint[] vertices, uint[] indices)
     {
         _indexCount = indices.Length;
-
         _gl.Api.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
-        _gl.Api.BufferData(BufferTargetARB.ArrayBuffer, (ReadOnlySpan<float>)vertices, BufferUsageARB.DynamicDraw);
-
+        _gl.Api.BufferData(BufferTargetARB.ArrayBuffer, (ReadOnlySpan<uint>)vertices, BufferUsageARB.DynamicDraw);
         _gl.Api.BindBuffer(BufferTargetARB.ElementArrayBuffer, _ebo);
         _gl.Api.BufferData(BufferTargetARB.ElementArrayBuffer, (ReadOnlySpan<uint>)indices, BufferUsageARB.DynamicDraw);
     }
 
-    public unsafe void Draw() // Add the 'unsafe' keyword here
+    public unsafe void Draw()
     {
-        if (_indexCount == 0) return;
+        if (_indexCount == 0) { Console.WriteLine("[VOXEL] Draw skipped: indexCount is 0"); return; }
         _gl.Api.BindVertexArray(_vao);
-        // Now the compiler will allow the (void*) cast
         _gl.Api.DrawElements(PrimitiveType.Triangles, (uint)_indexCount, DrawElementsType.UnsignedInt, (void*)0);
         _gl.Api.BindVertexArray(0);
     }
-
     public void Dispose()
     {
         _gl.Api.DeleteVertexArray(_vao);
