@@ -11,4 +11,7 @@
   <Project Path="Sandbox/Sandbox.csproj">
     <BuildType Project="Release" />
   </Project>
+  <Project Path="Engine.Physics/Engine.Physics.csproj">
+    <BuildType Project ="Release"/>
+  </Project>
 </Solution>

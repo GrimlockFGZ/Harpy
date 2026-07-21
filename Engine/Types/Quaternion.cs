@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using SNQuaternion = System.Numerics.Quaternion;
 using SNVector4 = System.Numerics.Vector4;
 
 namespace Engine;
@@ -19,8 +20,6 @@ public readonly struct Quaternion : IEquatable<Quaternion>, IFormattable
     public static readonly Quaternion Identity = new(0f, 0f, 0f, 1f);
     public static readonly Quaternion Zero = new(0f, 0f, 0f, 0f);
 
-    private const float SlerpEpsilon = 1e-6f;
-    private const float NormEpsilon = 1e-10f;
     private static readonly SNVector4 ConjugateMask = new(-1f, -1f, -1f, 1f);
 
     // --- Constructors ---
@@ -29,9 +28,12 @@ public readonly struct Quaternion : IEquatable<Quaternion>, IFormattable
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Quaternion(Vector3 xyz, float w) => _v = new SNVector4(xyz.X, xyz.Y, xyz.Z, w);
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Quaternion(SNVector4 v) => _v = v;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private Quaternion(SNQuaternion q) => _v = new SNVector4(q.X, q.Y, q.Z, q.W);
 
     // --- Properties ---
     public float LengthSquared => SNVector4.Dot(_v, _v);
@@ -48,51 +50,68 @@ public readonly struct Quaternion : IEquatable<Quaternion>, IFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Quaternion Conjugate(Quaternion q) => new(q._v * ConjugateMask);
 
-    // --- Vector Rotation (Using your Vector3 Operators) ---
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Quaternion Inverse(Quaternion q) => 
+        new(SNQuaternion.Inverse(q));
+
+    // --- Vector Rotation ---
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Vector3 Rotate(Vector3 v)
     {
-        var qv = this.XYZ;
-        // Uses your Vector3.Cross and operators
-        var t = Vector3.Cross(qv, v) * 2f;
-        return v + (t * W) + Vector3.Cross(qv, t);
+        return System.Numerics.Vector3.Transform(v, (SNQuaternion)this);
     }
-    
+
     /// <summary>Rotates a vector by the inverse (conjugate) of this quaternion.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Vector3 InverseRotate(Vector3 v) 
+    public Vector3 InverseRotate(Vector3 v)
     {
-        // For unit quaternions, the inverse is the conjugate.
-        // We create a temporary conjugate and use it to rotate the vector.
-        return Conjugate(this).Rotate(v);
+        return System.Numerics.Vector3.Transform(v, SNQuaternion.Conjugate((SNQuaternion)this));
     }
+
+    // --- Factories & Rotation Utilities ---
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Quaternion FromAxisAngle(Vector3 axis, float angleRadians) =>
+        new(SNQuaternion.CreateFromAxisAngle(axis, angleRadians));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Quaternion FromYawPitchRoll(float yaw, float pitch, float roll) =>
+        new(SNQuaternion.CreateFromYawPitchRoll(yaw, pitch, roll));
 
     // --- Interpolation ---
-    public static Quaternion Slerp(Quaternion a, Quaternion b, float t)
-    {
-        var dot = Dot(a, b);
-        var targetB = b;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Quaternion Slerp(Quaternion a, Quaternion b, float t) =>
+        new(SNQuaternion.Slerp(a, b, t));
 
-        if (dot < 0f) { targetB = new Quaternion(-b._v); dot = -dot; }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Quaternion Lerp(Quaternion a, Quaternion b, float t) =>
+        new(SNQuaternion.Lerp(a, b, t));
 
-        if (dot > 1f - SlerpEpsilon)
-        {
-            // Linear blend + normalize for speed on nearly identical orientations
-            return new Quaternion(SNVector4.Normalize(a._v + (targetB._v - a._v) * t));
-        }
+    // --- Multiplication / Operators ---
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Quaternion operator *(Quaternion a, Quaternion b) =>
+        new(SNQuaternion.Multiply(a, b));
 
-        var angle = MathF.Acos(MathF.Max(-1f, MathF.Min(1f, dot)));
-        var invSinAngle = 1f / MathF.Sin(angle);
-        var sa = MathF.Sin((1f - t) * angle) * invSinAngle;
-        var sb = MathF.Sin(t * angle) * invSinAngle;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Quaternion operator -(Quaternion q) => new(-q._v);
 
-        return new Quaternion((a._v * sa) + (targetB._v * sb));
-    }
+    // --- System.Numerics Implicit Conversion Tricks ---
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator SNQuaternion(Quaternion q) => new(q.X, q.Y, q.Z, q.W);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator Quaternion(SNQuaternion q) => new(q.X, q.Y, q.Z, q.W);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator SNVector4(Quaternion q) => q._v;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator Quaternion(SNVector4 v) => new(v);
 
     // --- Equality & Hashing ---
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Equals(Quaternion other) => _v == other._v;
     public override bool Equals(object? obj) => obj is Quaternion other && Equals(other);
-    
+
     public override int GetHashCode()
     {
         // Antipodal symmetry hash: ensures q and -q hash to the same bucket
@@ -100,20 +119,11 @@ public readonly struct Quaternion : IEquatable<Quaternion>, IFormattable
         return hashVec.GetHashCode();
     }
 
-    public static bool operator ==(Quaternion left, Quaternion right) => left.Equals(right);
-    public static bool operator !=(Quaternion left, Quaternion right) => !left.Equals(right);
-    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Quaternion operator *(Quaternion a, Quaternion b)
-    {
-        // Standard Hamiltonian product: combines two rotations into one
-        return new Quaternion(
-            a.W * b.X + a.X * b.W + a.Y * b.Z - a.Z * b.Y,
-            a.W * b.Y - a.X * b.Z + a.Y * b.W + a.Z * b.X,
-            a.W * b.Z + a.X * b.Y - a.Y * b.X + a.Z * b.W,
-            a.W * b.W - a.X * b.X - a.Y * b.Y - a.Z * b.Z
-        );
-    }
+    public static bool operator ==(Quaternion left, Quaternion right) => left.Equals(right);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool operator !=(Quaternion left, Quaternion right) => !left.Equals(right);
 
     // --- Boilerplate ---
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

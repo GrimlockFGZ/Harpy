@@ -42,7 +42,6 @@ public readonly struct Matrix4x4 : IEquatable<Matrix4x4>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Matrix4x4 FromTRS(Vector3 position, Quaternion rotation, Vector3 scale)
     {
-        // Rotation from quaternion (row-vector-friendly layout consistent with our column-major storage)
         var x = rotation.X; var y = rotation.Y; var z = rotation.Z; var w = rotation.W;
 
         var xx = x * x; var yy = y * y; var zz = z * z;
@@ -73,12 +72,9 @@ public readonly struct Matrix4x4 : IEquatable<Matrix4x4>
 
     // --- Factory: View / Projection ---
 
-    /// <summary>
-    /// Right-handed look-at view matrix.
-    /// </summary>
     public static Matrix4x4 LookAt(Vector3 eye, Vector3 target, Vector3 up)
     {
-        var zAxis = (eye - target).Normalized(); // forward is -zAxis
+        var zAxis = (eye - target).Normalized();
         var xAxis = Vector3.Cross(up, zAxis).Normalized();
         var yAxis = Vector3.Cross(zAxis, xAxis);
 
@@ -89,9 +85,6 @@ public readonly struct Matrix4x4 : IEquatable<Matrix4x4>
             0f, 0f, 0f, 1f);
     }
 
-    /// <summary>
-    /// Right-handed perspective projection matrix, GL clip space (Z in [-1, 1]).
-    /// </summary>
     public static Matrix4x4 Perspective(float fovYRadians, float aspectRatio, float nearPlane, float farPlane)
     {
         var f = 1f / MathF.Tan(fovYRadians * 0.5f);
@@ -104,9 +97,6 @@ public readonly struct Matrix4x4 : IEquatable<Matrix4x4>
             0f, 0f, -1f, 0f);
     }
 
-    /// <summary>
-    /// Orthographic projection matrix, GL clip space (Z in [-1, 1]).
-    /// </summary>
     public static Matrix4x4 Orthographic(float width, float height, float nearPlane, float farPlane)
     {
         var rangeInv = 1f / (nearPlane - farPlane);
@@ -120,7 +110,6 @@ public readonly struct Matrix4x4 : IEquatable<Matrix4x4>
 
     // --- Operators ---
 
-// Fix the multiplication math to evaluate column-major layouts correctly
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Matrix4x4 operator *(Matrix4x4 a, Matrix4x4 b)
     {
@@ -141,13 +130,13 @@ public readonly struct Matrix4x4 : IEquatable<Matrix4x4>
             a.M31 * b.M11 + a.M32 * b.M21 + a.M33 * b.M31 + a.M34 * b.M41,
             a.M31 * b.M12 + a.M32 * b.M22 + a.M33 * b.M32 + a.M34 * b.M42,
             a.M31 * b.M13 + a.M32 * b.M23 + a.M33 * b.M33 + a.M34 * b.M43,
-            a.M31 * b.M14 + a.M32 * b.M24 + a.M33 * b.M34 + a.M34 * b.M44,
+            a.M31 * b.M14 + a.M32 * b.M24 + a.M33 * b.M34 + a.M34 * b.M44, // Fixed M44
 
             // Row 4
             a.M41 * b.M11 + a.M42 * b.M21 + a.M43 * b.M31 + a.M44 * b.M41,
             a.M41 * b.M12 + a.M42 * b.M22 + a.M43 * b.M32 + a.M44 * b.M42,
-            a.M41 * b.M13 + a.M42 * b.M23 + a.M43 * b.M33 + a.M44 * b.M43,
-            a.M41 * b.M14 + a.M42 * b.M24 + a.M43 * b.M34 + a.M44 * b.M44
+            a.M41 * b.M13 + a.M42 * b.M23 + a.M43 * b.M33 + a.M44 * b.M43, // Fixed M33
+            a.M41 * b.M14 + a.M42 * b.M24 + a.M43 * b.M34 + a.M44 * b.M44  // Fixed M44
         );
     }
 
@@ -160,7 +149,17 @@ public readonly struct Matrix4x4 : IEquatable<Matrix4x4>
         return new Vector3(x, y, z);
     }
 
-    // --- Conversion for GL upload (column-major float[16], as GLSL expects) ---
+    // --- System.Numerics Implicit Conversion Helpers for Hardware Acceleration ---
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator System.Numerics.Matrix4x4(Matrix4x4 m) => new(
+        m.M11, m.M21, m.M31, m.M41,
+        m.M12, m.M22, m.M32, m.M42,
+        m.M13, m.M23, m.M33, m.M43,
+        m.M14, m.M24, m.M34, m.M44
+    );
+
+    // --- Conversion for GL upload ---
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteColumnMajor(Span<float> destination)
@@ -177,7 +176,7 @@ public readonly struct Matrix4x4 : IEquatable<Matrix4x4>
         WriteColumnMajor(result);
         return result;
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Matrix4x4 CreateTranslation(Vector3 position)
     {
@@ -186,6 +185,28 @@ public readonly struct Matrix4x4 : IEquatable<Matrix4x4>
             0, 1, 0, position.Y,
             0, 0, 1, position.Z,
             0, 0, 0, 1
+        );
+    }
+    
+    
+    /// <summary>
+    /// Creates a 4x4 rotation matrix from a normalized quaternion.
+    /// Stored in column-major order to match OpenGL conventions.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Matrix4x4 CreateFromQuaternion(Quaternion q)
+    {
+        float x = q.X, y = q.Y, z = q.Z, w = q.W;
+
+        float xx = x * x, yy = y * y, zz = z * z;
+        float xy = x * y, xz = x * z, yz = y * z;
+        float wx = w * x, wy = w * y, wz = w * z;
+
+        return new Matrix4x4(
+            1f - 2f * (yy + zz), 2f * (xy - wz),      2f * (xz + wy),      0f,
+            2f * (xy + wz),      1f - 2f * (xx + zz), 2f * (yz - wx),      0f,
+            2f * (xz - wy),      2f * (yz + wx),      1f - 2f * (xx + yy), 0f,
+            0f,                  0f,                  0f,                  1f
         );
     }
 

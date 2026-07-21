@@ -222,17 +222,15 @@ public class HarpyViewport : OpenGlControlBase, ICustomHitTest
             var aspectRatio = fbHeight > 0 ? (float)fbWidth / fbHeight : 1f;
             _renderer.Render(delta, false, aspectRatio);
         }
-    
-        // 5. Diagnostics
-        var error = silkGl.GetError();
-        if (error != GLEnum.NoError)
 
         var error = _silkGl.GetError();
         if (error != GLEnum.NoError) Console.WriteLine($"[GL ERROR] {error}");
         
         Dispatcher.UIThread.Post(_requestNextFrameAction, DispatcherPriority.Render);
+        if (_frameCount++ >= 600)
         {
-            Console.WriteLine($"[GL ERROR] {error}");
+            AllocationTracker.ReportAndReset();
+            _frameCount = 0;
         }
         
     }

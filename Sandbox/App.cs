@@ -17,7 +17,9 @@ public class App : Application
         {
             desktop.MainWindow = new EditorWindow();
         }
-
+        
+        AllocationTracker.StartTracking();
         base.OnFrameworkInitializationCompleted();
+        
     }
 }
