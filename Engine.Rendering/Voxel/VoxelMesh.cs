@@ -1,3 +1,4 @@
+using Engine.Core;
 using HarpyEngine.Rendering.Helios;
 using Silk.NET.OpenGL;
 
@@ -52,7 +53,7 @@ public sealed class VoxelMesh : IDisposable
 
     public unsafe void Draw()
     {
-        if (_indexCount == 0) { Console.WriteLine("[VOXEL] Draw skipped: indexCount is 0"); return; }
+        if (_indexCount == 0) { EngineLog.Warning("Draw skipped: indexCount is 0", "VOXEL"); return; }
         _gl.Api.BindVertexArray(_vao);
         _gl.Api.DrawElements(PrimitiveType.Triangles, (uint)_indexCount, DrawElementsType.UnsignedInt, (void*)0);
         _gl.Api.BindVertexArray(0);

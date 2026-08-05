@@ -183,11 +183,11 @@ public class HarpyViewport : OpenGlControlBase, ICustomHitTest
             if (_pendingRegistry is not null)
                 _renderer.SetRegistry(_pendingRegistry);
             
-            Console.WriteLine("[OPENGL] Initialization Successful!");
+            EngineLog.Info("Initialization Successful!", "OPENGL");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[CRITICAL] OpenGL Init Crashed: {ex.Message}\n{ex.StackTrace}");
+            EngineLog.Critical($"OpenGL Init Crashed: {ex.Message}\n{ex.StackTrace}", "OPENGL");
         }
     }
 
@@ -224,7 +224,7 @@ public class HarpyViewport : OpenGlControlBase, ICustomHitTest
         }
 
         var error = _silkGl.GetError();
-        if (error != GLEnum.NoError) Console.WriteLine($"[GL ERROR] {error}");
+        if (error != GLEnum.NoError) EngineLog.Error(error.ToString(), "GL ERROR");
         
         Dispatcher.UIThread.Post(_requestNextFrameAction, DispatcherPriority.Render);
         if (_frameCount++ >= 600)

@@ -1,0 +1,159 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="clr-namespace:HarpyEngine.Sandbox.Editor.Models"
+             xmlns:helpers="clr-namespace:HarpyEngine.Sandbox.Helpers"
+             xmlns:core="clr-namespace:Engine.Core;assembly=Engine"
+             x:Class="HarpyEngine.Sandbox.Editor.ConsolePanel"
+             x:DataType="models:ConsoleViewModel"
+             x:CompileBindings="True">
+
+    <UserControl.Styles>
+
+        <Style Selector="TextBlock.PanelLabel">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#444444"/>
+            <Setter Property="LetterSpacing" Value="1.5"/>
+        </Style>
+
+        <Style Selector="Button.ConsoleBtn">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Background" Value="#1e1e1e"/>
+            <Setter Property="Foreground" Value="#999999"/>
+            <Setter Property="BorderBrush" Value="#2e2e2e"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+        <Style Selector="Button.ConsoleBtn:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#2a2a2a"/>
+        </Style>
+
+        <Style Selector="ToggleButton.LevelToggle">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Background" Value="#1a1a1a"/>
+            <Setter Property="Foreground" Value="#555555"/>
+            <Setter Property="BorderBrush" Value="#2a2a2a"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+        <Style Selector="ToggleButton.LevelToggle:checked /template/ ContentPresenter">
+            <Setter Property="TextBlock.Foreground" Value="#dddddd"/>
+        </Style>
+        <Style Selector="ToggleButton.LevelToggle:checked">
+            <Setter Property="Background" Value="#242424"/>
+            <Setter Property="BorderBrush" Value="#3a3a3a"/>
+        </Style>
+
+        <Style Selector="TextBox.SearchBox">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Background" Value="#1a1a1a"/>
+            <Setter Property="Foreground" Value="#cccccc"/>
+            <Setter Property="BorderBrush" Value="#2a2a2a"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Watermark" Value="Filter log..."/>
+        </Style>
+
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="MinHeight" Value="20"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#1a1a1a"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#1a1630"/>
+        </Style>
+
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto, Auto, *">
+
+        <!-- Panel header -->
+        <Border Grid.Row="0"
+                Background="#161616"
+                BorderBrush="#1e1e1e"
+                BorderThickness="0,0,0,1"
+                Padding="10,8">
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Rectangle Width="3" Height="12" Fill="#7c5cfc" RadiusX="2" RadiusY="2"/>
+                <TextBlock Classes="PanelLabel" Text="CONSOLE"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Toolbar -->
+        <Grid Grid.Row="1"
+              ColumnDefinitions="Auto, Auto, Auto, *, Auto"
+              Margin="8,6,8,6">
+
+            <ToggleButton Grid.Column="0"
+                          Classes="LevelToggle"
+                          Content="INFO"
+                          IsChecked="{Binding ShowInfo}"
+                          Margin="0,0,4,0"/>
+            <ToggleButton Grid.Column="1"
+                          Classes="LevelToggle"
+                          Content="WARN"
+                          IsChecked="{Binding ShowWarning}"
+                          Margin="0,0,4,0"/>
+            <ToggleButton Grid.Column="2"
+                          Classes="LevelToggle"
+                          Content="ERROR"
+                          IsChecked="{Binding ShowError}"
+                          Margin="0,0,8,0"/>
+
+            <TextBox Grid.Column="3"
+                     Classes="SearchBox"
+                     Text="{Binding SearchText}"
+                     Margin="0,0,8,0"/>
+
+            <Button Grid.Column="4"
+                    Classes="ConsoleBtn"
+                    Content="Clear"
+                    Click="OnClearClicked"/>
+        </Grid>
+
+        <!-- Log entries -->
+        <ListBox Grid.Row="2"
+                 x:Name="LogList"
+                 ItemsSource="{Binding Filtered}">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="core:LogEntry">
+                    <Grid ColumnDefinitions="60, 60, *">
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding Timestamp, StringFormat='HH:mm:ss'}"
+                                   FontSize="10"
+                                   Foreground="#444444"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding Category}"
+                                   FontSize="9"
+                                   FontWeight="Bold"
+                                   Foreground="#555555"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="2"
+                                   Text="{Binding Message}"
+                                   FontSize="11"
+                                   Foreground="{Binding Level, Converter={x:Static helpers:LogLevelToBrushConverter.Instance}}"
+                                   VerticalAlignment="Center"
+                                   TextWrapping="NoWrap"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+    </Grid>
+</UserControl>

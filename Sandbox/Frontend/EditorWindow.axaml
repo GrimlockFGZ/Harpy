@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:editor="clr-namespace:HarpyEngine.Sandbox.Editor"
+        xmlns:docking="clr-namespace:HarpyEngine.Sandbox.Editor.Docking"
         x:Class="HarpyEngine.Sandbox.Editor.EditorWindow"
         x:DataType="editor:EditorWindow"
         x:CompileBindings="True"
@@ -51,9 +52,10 @@
                 <MenuItem Header="Project Settings..." Click="OnProjectSettingsClicked"/>
             </MenuItem>
             <MenuItem Header="_Window">
-                <MenuItem Header="Hierarchy" IsChecked="True"/>
-                <MenuItem Header="Inspector" IsChecked="True"/>
-                <MenuItem Header="Content Browser" IsChecked="True"/>
+                <MenuItem Header="Hierarchy" Click="OnReopenHierarchyClicked"/>
+                <MenuItem Header="Inspector" Click="OnReopenInspectorClicked"/>
+                <MenuItem Header="Content Browser" Click="OnReopenContentBrowserClicked"/>
+                <MenuItem Header="Console" Click="OnReopenConsoleClicked"/>
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="Documentation"/>
@@ -61,32 +63,6 @@
             </MenuItem>
         </Menu>
 
-        <Grid RowDefinitions="*, 4, 220" ColumnDefinitions="220, 4, *, 4, 260">
-
-            <editor:Hierarchy x:Name="HierarchyPanel"
-                              Grid.Row="0" Grid.Column="0" Grid.RowSpan="3"
-                              Background="#141414"/>
-
-            <GridSplitter Grid.Row="0" Grid.Column="1" Grid.RowSpan="3"
-                          ResizeDirection="Columns"/>
-
-            <editor:HarpyViewport x:Name="ViewportPanel"
-                                  Grid.Row="0" Grid.Column="2"/>
-
-            <GridSplitter Grid.Row="1" Grid.Column="2"
-                          ResizeDirection="Rows"/>
-
-            <editor:ContentBrowser x:Name="ContentBrowserPanel"
-                                   Grid.Row="2" Grid.Column="2"
-                                   Background="#131313"/>
-
-            <GridSplitter Grid.Row="0" Grid.Column="3" Grid.RowSpan="3"
-                          ResizeDirection="Columns"/>
-
-            <editor:Inspector x:Name="InspectorPanel"
-                              Grid.Row="0" Grid.Column="4" Grid.RowSpan="3"
-                              Background="#141414"/>
-
-        </Grid>
+        <docking:DockHost x:Name="RootDock"/>
     </DockPanel>
 </Window>

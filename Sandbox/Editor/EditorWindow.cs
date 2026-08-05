@@ -1,10 +1,14 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Media;
 using Engine;
 using Engine.Core;
 using HarpyEngine.Rendering.Voxel;
 using HarpyEngine.Resources.Mnemosyne;
+using HarpyEngine.Sandbox.Editor.Docking;
 using HarpyEngine.Sandbox.Editor.Models;
+using Transform = Engine.Transform;
 
 namespace HarpyEngine.Sandbox.Editor;
 
@@ -13,7 +17,19 @@ public partial class EditorWindow : Window
     private readonly Registry _registry = new();
     private readonly HierarchyViewModel _hierarchyViewModel = new();
     private readonly InspectorViewModel _inspectorViewModel = new();
+    private readonly ConsoleViewModel _consoleViewModel = new();
     private readonly List<IDisposable> _busSubscriptions = [];
+
+    private readonly Hierarchy _hierarchyPanel = new();
+    private readonly HarpyViewport _viewportPanel = new();
+    private readonly ContentBrowser _contentBrowserPanel = new();
+    private readonly Inspector _inspectorPanel = new();
+    private readonly ConsolePanel _consolePanel = new();
+
+    private DockItem _hierarchyItem = null!;
+    private DockItem _inspectorItem = null!;
+    private DockItem _contentBrowserItem = null!;
+    private DockItem _consoleItem = null!;
 
     public EditorWindow()
     {
@@ -40,10 +56,13 @@ public partial class EditorWindow : Window
         _busSubscriptions.Add(Event<EntityCreated>.Subscribe(_ => UpdateViewportTriangleCount()));
         _busSubscriptions.Add(Event<EntityDestroyed>.Subscribe(_ => UpdateViewportTriangleCount()));
 
-        HierarchyPanel.DataContext = _hierarchyViewModel;
-        InspectorPanel.DataContext = _inspectorViewModel;
+        _hierarchyPanel.DataContext = _hierarchyViewModel;
+        _inspectorPanel.DataContext = _inspectorViewModel;
+        _consolePanel.DataContext = _consoleViewModel;
 
-        ViewportPanel.SetRegistry(_registry);
+        _viewportPanel.SetRegistry(_registry);
+
+        BuildDockLayout();
 
         SeedScene();
 
@@ -51,7 +70,50 @@ public partial class EditorWindow : Window
         var assetPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
         db.Init(assetPath);
 
-        ContentBrowserPanel.Initialize(db, assetPath);
+        _contentBrowserPanel.Initialize(db, assetPath);
+
+        EngineLog.Info("Editor window ready.", "Editor");
+    }
+
+    private void BuildDockLayout()
+    {
+        _hierarchyItem = new DockItem("hierarchy", "HIERARCHY", Brush.Parse("#7c5cfc"), _hierarchyPanel, DockSide.Left);
+        var viewportItem = new DockItem("viewport", "VIEWPORT", Brush.Parse("#5bc0de"), _viewportPanel, DockSide.Center) { CanClose = false };
+        _contentBrowserItem = new DockItem("content-browser", "CONTENT BROWSER", Brush.Parse("#f39c12"), _contentBrowserPanel, DockSide.Bottom);
+        _consoleItem = new DockItem("console", "CONSOLE", Brush.Parse("#1ca880"), _consolePanel, DockSide.Bottom);
+        _inspectorItem = new DockItem("inspector", "INSPECTOR", Brush.Parse("#a48bff"), _inspectorPanel, DockSide.Right);
+
+        var viewportGroup = new DockGroup();
+        viewportGroup.AddItem(viewportItem);
+
+        var bottomGroup = new DockGroup();
+        bottomGroup.AddItem(_contentBrowserItem);
+        bottomGroup.AddItem(_consoleItem);
+
+        var centerSplit = new DockSplit(Orientation.Vertical, viewportGroup, bottomGroup, firstRatio: 3, secondRatio: 1);
+
+        var hierarchyGroup = new DockGroup();
+        hierarchyGroup.AddItem(_hierarchyItem);
+
+        var leftSplit = new DockSplit(Orientation.Horizontal, hierarchyGroup, centerSplit, firstRatio: 1, secondRatio: 4);
+
+        var inspectorGroup = new DockGroup();
+        inspectorGroup.AddItem(_inspectorItem);
+
+        var rootSplit = new DockSplit(Orientation.Horizontal, leftSplit, inspectorGroup, firstRatio: 5, secondRatio: 1);
+
+        RootDock.Root = rootSplit;
+    }
+
+    private void OnReopenHierarchyClicked(object? sender, RoutedEventArgs e) => ReopenIfClosed(_hierarchyItem);
+    private void OnReopenInspectorClicked(object? sender, RoutedEventArgs e) => ReopenIfClosed(_inspectorItem);
+    private void OnReopenContentBrowserClicked(object? sender, RoutedEventArgs e) => ReopenIfClosed(_contentBrowserItem);
+    private void OnReopenConsoleClicked(object? sender, RoutedEventArgs e) => ReopenIfClosed(_consoleItem);
+
+    private void ReopenIfClosed(DockItem item)
+    {
+        if (item.Group is not null) return; // already open, either docked or floating
+        RootDock.AddToFirstGroup(item);
     }
 
     private void SeedScene()
@@ -61,7 +123,7 @@ public partial class EditorWindow : Window
         for (var i = 0; i < solidTypes.Length; i++)
         {
             var entity = _registry.CreateEntity();
-            _registry.AddComponent(entity, new Transform(new Vector3(i * 2f, 0f, 0f)));
+            _registry.AddComponent(entity, new Engine.Transform(new Vector3(i * 2f, 0f, 0f)));
             _registry.AddComponent(entity, new VoxelBlock(solidTypes[i]));
         }
 
@@ -70,7 +132,7 @@ public partial class EditorWindow : Window
 
     private void UpdateViewportTriangleCount()
     {
-        ViewportPanel.TriangleInstanceCount = _registry.GetAllEntities().Count();
+        _viewportPanel.TriangleInstanceCount = _registry.GetAllEntities().Count();
     }
 
     private void OnHierarchySelectionChanged(HierarchyEntry? entry)
@@ -189,7 +251,7 @@ public partial class EditorWindow : Window
         if (sender is not NewProjectDialog dialog || dialog.ProjectPath == null) return;
             
         AssetDatabase.Instance.UpdatePath(dialog.ProjectPath);
-        ContentBrowserPanel.Initialize(AssetDatabase.Instance,dialog.ProjectPath);
+        _contentBrowserPanel.Initialize(AssetDatabase.Instance,dialog.ProjectPath);
         var projectName = Path.GetFileName(Path.TrimEndingDirectorySeparator(dialog.ProjectPath));
         Title = $"Harpy Engine - {projectName}";
     }
