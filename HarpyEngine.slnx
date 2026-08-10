@@ -8,10 +8,10 @@
   <Project Path="Engine.Resources/Engine.Resources.csproj">
     <BuildType Project="Release" />
   </Project>
-  <Project Path="Engine.Tests/Engine.Tests.csproj">
-    <BuildType Project="Release" />
-  </Project>
   <Project Path="Sandbox/Sandbox.csproj">
     <BuildType Project="Release" />
+  </Project>
+  <Project Path="Engine.Physics/Engine.Physics.csproj">
+    <BuildType Project ="Release"/>
   </Project>
 </Solution>

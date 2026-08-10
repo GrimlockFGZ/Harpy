@@ -1,9 +1,9 @@
 
-namespace Engine.Core.Core.ECS;
+namespace Engine.Core.ECS;
 
 public sealed class InputService
 {
-    private readonly HashSet<string> _keysDown = new();
+    private readonly HashSet<string> _keysDown = [];
 
     public bool IsKeyDown(string key) => _keysDown.Contains(key);
 

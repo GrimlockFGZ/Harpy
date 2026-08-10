@@ -2,7 +2,8 @@
 
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
-        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        
+        <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
 
      
         <OutputType>Exe</OutputType>
@@ -18,14 +19,28 @@
     <ItemGroup>
         <!-- external package references -->
         <AvaloniaResource Include="Assets\Favicon.ico" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />
-        <PackageReference Include="Avalonia" Version="11.3.12" />
+        <PackageReference Include="Avalonia.Desktop" Version="12.0.2" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.2" />
+        <PackageReference Include="Avalonia" Version="12.0.2" />
+        <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" />
 
         <!-- internal dependencies -->
         <ProjectReference Include="..\Engine\Engine.csproj" />
         <ProjectReference Include="..\Engine.Rendering\Engine.Rendering.csproj" />
         <ProjectReference Include="..\Engine.Resources\Engine.Resources.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="CoreEngine.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\Assets\voxel_vertex.glsl" CopyToOutputDirectory="PreserveNewest">
+        <Link>Assets\voxel_vertex.glsl</Link>
+      </Content>
+      <Content Include="..\Assets\voxel_fragment.glsl" CopyToOutputDirectory="PreserveNewest">
+        <Link>Assets\voxel_fragment.glsl</Link>
+      </Content>
     </ItemGroup>
     
 </Project>

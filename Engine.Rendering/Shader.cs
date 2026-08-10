@@ -1,5 +1,6 @@
 using Engine.Core;
 using Engine.Exceptions;
+using HarpyEngine.Rendering.Helios;
 using Silk.NET.OpenGL;
 
 namespace HarpyEngine.Rendering;
@@ -15,7 +16,7 @@ public class Shader
     /// </summary>
     public uint Handle { get; private set; }
 
-    private readonly GL _gl;
+    private readonly GlContext _gl;
     private readonly string _vPath;
     private readonly string _fPath;
 
@@ -25,22 +26,41 @@ public class Shader
     /// <param name="gl">The OpenGL context.</param>
     /// <param name="vertexPath">The file path to the vertex shader source.</param>
     /// <param name="fragmentPath">The file path to the fragment shader source.</param>
-    public Shader(GL gl, string vertexPath, string fragmentPath)
+    public Shader(GlContext gl, string vertexPath, string fragmentPath)
     {
         _gl = gl;
         _vPath = vertexPath;
         _fPath = fragmentPath;
-        Reload();
+    
+        // Simply trigger the load. Handle is updated inside here.
+        Reload(); 
     }
+    
 
     /// <summary>
     /// Sets this shader program as the active program in the OpenGL context.
     /// </summary>
-    public void Use() => _gl.UseProgram(Handle);
+    public void Use() => _gl.Api.UseProgram(Handle);
 
     /// <summary>
-    /// Reloads the shader program by recompiling and relinking the source files from disk.
+    /// Uploads a 4x4 matrix uniform. Assumes this shader is already bound via <see cref="Use"/>.
     /// </summary>
+    public unsafe void SetMatrix4(string name, in Engine.Matrix4x4 matrix)
+    {
+        var location = _gl.Api.GetUniformLocation(Handle, name);
+        if (location == -1) return;
+
+        Span<float> columnMajor = stackalloc float[16];
+        matrix.WriteColumnMajor(columnMajor);
+
+        fixed (float* ptr = columnMajor)
+        {
+            _gl.Api.UniformMatrix4(location, 1, false, ptr);
+        }
+    }
+
+
+
     public void Reload()
     {
         try
@@ -48,33 +68,37 @@ public class Shader
             var vertex = CompileShader(ShaderType.VertexShader, File.ReadAllText(_vPath));
             var fragment = CompileShader(ShaderType.FragmentShader, File.ReadAllText(_fPath));
 
-            var newHandle = _gl.CreateProgram();
-            _gl.AttachShader(newHandle, vertex);
-            _gl.AttachShader(newHandle, fragment);
-            _gl.LinkProgram(newHandle);
+            var newHandle = _gl.Api.CreateProgram();
+            _gl.Api.AttachShader(newHandle, vertex);
+            _gl.Api.AttachShader(newHandle, fragment);
+            _gl.Api.LinkProgram(newHandle);
 
-            _gl.GetProgram(newHandle, ProgramPropertyARB.LinkStatus, out var status);
+            _gl.Api.GetProgram(newHandle, ProgramPropertyARB.LinkStatus, out var status);
             if (status == 0)
             {
-                Logger.LogError($"[Shader Error] Link Fail: {_gl.GetProgramInfoLog(newHandle)}");
-                _gl.DeleteProgram(newHandle);
+                // This is the real check. If this logs anything, your GLSL has a syntax error.
+                var log = _gl.Api.GetProgramInfoLog(newHandle);
+                Logger.LogError($"[Shader Error] Link Fail: {log}");
+                _gl.Api.DeleteProgram(newHandle);
                 return;
             }
 
-            // Successfully linked, now swap
-            if (Handle != 0) _gl.DeleteProgram(Handle);
+            // Successfully linked
+            if (Handle != 0) _gl.Api.DeleteProgram(Handle);
             Handle = newHandle;
 
-            _gl.DeleteShader(vertex);
-            _gl.DeleteShader(fragment);
+            _gl.Api.DetachShader(newHandle, vertex);
+            _gl.Api.DetachShader(newHandle, fragment);
+            _gl.Api.DeleteShader(vertex);
+            _gl.Api.DeleteShader(fragment);
+        
             Logger.LogSuccess($"Reloaded: {Path.GetFileName(_vPath)}");
         }
-        catch (ResourceNotFoundException ex)
+        catch (Exception ex)
         {
-            Logger.LogFatal($"[Shader Error] {ex.Message}");
+            Logger.LogFatal($"[Shader Error] Failed to (re)load: {ex.Message}");
         }
     }
-
     /// <summary>
     /// Compiles a single shader stage.
     /// </summary>
@@ -84,20 +108,20 @@ public class Shader
     /// <exception cref="Exception">Thrown if shader compilation fails.</exception>
     private uint CompileShader(ShaderType type, string source)
     {
-        var shader = _gl.CreateShader(type);
-        _gl.ShaderSource(shader, source);
-        _gl.CompileShader(shader);
+        var shader = _gl.Api.CreateShader(type);
+        _gl.Api.ShaderSource(shader, source);
+        _gl.Api.CompileShader(shader);
 
-        _gl.GetShader(shader, ShaderParameterName.CompileStatus, out var status);
+        _gl.Api.GetShader(shader, ShaderParameterName.CompileStatus, out var status);
 
         // Happy Path: Status 1 (GL_TRUE)
         if (status != 0) return shader;
 
         // Error Path:
-        var infoLog = _gl.GetShaderInfoLog(shader);
-        _gl.DeleteShader(shader);
+        var infoLog = _gl.Api.GetShaderInfoLog(shader);
+        _gl.Api.DeleteShader(shader);
 
-        string typeName = Enum.GetName(type) ?? "UnknownShader";
+        var typeName = Enum.GetName(type) ?? "UnknownShader";
 
         throw new ShaderException(typeName, infoLog);
     }

@@ -1,28 +1,17 @@
-
 using HarpyEngine.Exceptions;
+using System.Runtime.CompilerServices;
 
 namespace Engine.Core;
 
-/// <summary>
-/// Represents a unique identifier for an entity within a registry.
-/// </summary>
-/// <remarks>
-/// This is intentionally lightweight. For extra safety (stale entity detection),
-/// you can extend this later with a Generation/Version field.
-/// </remarks>
 public readonly record struct Entity(int Id);
 
 internal interface IComponentPool
 {
-    void EnsureEntityCapacity(int entityId);
+    int Count { get; }
     bool Has(Entity entity);
     bool Remove(Entity entity);
 }
 
-/// <summary>
-/// Central registry for managing entities and their associated components.
-/// Uses sparse-set pools for performance and scalable iteration.
-/// </summary>
 public sealed class Registry
 {
     private int _entityCount;
@@ -31,14 +20,11 @@ public sealed class Registry
 
     public IEnumerable<Entity> GetAllEntities() => _entities;
 
-    public event Action<Entity>? EntityCreated;
-    public event Action<Entity>? EntityDestroyed;
-
     public Entity CreateEntity()
     {
         var entity = new Entity(_entityCount++);
         _entities.Add(entity);
-        EntityCreated?.Invoke(entity);
+        Event<EntityCreated>.Invoke(new EntityCreated(entity));
         return entity;
     }
 
@@ -51,9 +37,10 @@ public sealed class Registry
             pool.Remove(entity);
         }
 
-        EntityDestroyed?.Invoke(entity);
+        Event<EntityDestroyed>.Invoke(new EntityDestroyed(entity));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void EnsureAlive(Entity entity)
     {
         if (!_entities.Contains(entity))
@@ -95,17 +82,85 @@ public sealed class Registry
         return Pool<T>().Remove(entity);
     }
 
-    /// <summary>
-    /// Fast view over all entities that have component T.
-    /// The returned span is valid until the pool structure changes (add/remove of T).
-    /// </summary>
     public ReadOnlySpan<Entity> ViewEntities<T>() where T : struct
         => Pool<T>().DenseEntities;
 
-    /// <summary>
-    /// Fast view over dense component data for T (aligned with ViewEntities&lt;T&gt;()).
-    /// The returned span is valid until the pool structure changes (add/remove of T).
-    /// </summary>
     public Span<T> ViewData<T>() where T : struct
         => Pool<T>().DenseData;
+
+    /// <summary>
+    /// Executes an action on all alive entities that have both component types.
+    /// Completely avoids heap allocations and keeps Spans safely on the stack.
+    /// </summary>
+    public void ForEach<T1, T2>(Action<Entity> action)
+        where T1 : struct
+        where T2 : struct
+    {
+        var pool1 = Pool<T1>();
+        var pool2 = Pool<T2>();
+
+        if (pool1.Count < pool2.Count)
+        {
+            var entities = pool1.DenseEntities;
+            for (var i = 0; i < entities.Length; i++)
+            {
+                if (pool2.Has(entities[i])) action(entities[i]);
+            }
+        }
+        else
+        {
+            var entities = pool2.DenseEntities;
+            for (var i = 0; i < entities.Length; i++)
+            {
+                if (pool1.Has(entities[i])) action(entities[i]);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Executes an action on all alive entities that have all three component types.
+    /// Optimized to choose the smallest iteration path with no reflection or dynamic overhead.
+    /// </summary>
+    public void ForEach<T1, T2, T3>(Action<Entity> action)
+        where T1 : struct
+        where T2 : struct
+        where T3 : struct
+    {
+        var p1 = Pool<T1>();
+        var p2 = Pool<T2>();
+        var p3 = Pool<T3>();
+
+        // Safely determine the smallest pool without 'dynamic' keyword casting
+        var c1 = p1.Count;
+        var c2 = p2.Count;
+        var c3 = p3.Count;
+
+        if (c1 <= c2 && c1 <= c3)
+        {
+            var entities = p1.DenseEntities;
+            for (var i = 0; i < entities.Length; i++)
+            {
+                var e = entities[i];
+                if (p2.Has(e) && p3.Has(e)) action(e);
+            }
+        }
+        else if (c2 <= c1 && c2 <= c3)
+        {
+            var entities = p2.DenseEntities;
+            for (var i = 0; i < entities.Length; i++)
+            {
+                var e = entities[i];
+                if (p1.Has(e) && p3.Has(e)) action(e);
+            }
+        }
+        else
+        {
+            var entities = p3.DenseEntities;
+            for (var i = 0; i < entities.Length; i++)
+            {
+                var e = entities[i];
+                if (p1.Has(e) && p2.Has(e)) action(e);
+            }
+        }
+    }
 }

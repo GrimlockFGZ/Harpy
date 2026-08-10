@@ -1,0 +1,140 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:resources="clr-namespace:HarpyEngine.Resources;assembly=Engine.Resources"
+             xmlns:helpers="clr-namespace:HarpyEngine.Sandbox.Helpers"
+             x:Class="HarpyEngine.Sandbox.Editor.ContentBrowser"
+             x:DataType="editor:ContentBrowser"
+             xmlns:editor="clr-namespace:HarpyEngine.Sandbox.Editor">
+
+    <UserControl.Styles>
+
+        <Style Selector="TextBlock.PanelLabel">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#444444"/>
+            <Setter Property="LetterSpacing" Value="1.5"/>
+        </Style>
+
+        <Style Selector="TextBlock.BreadcrumbSegment">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Foreground" Value="#555555"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="TextBlock.BreadcrumbSep">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="4,0"/>
+        </Style>
+
+        <Style Selector="Button.FilterBtn">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Background" Value="#1e1e1e"/>
+            <Setter Property="Foreground" Value="#666666"/>
+            <Setter Property="BorderBrush" Value="#2e2e2e"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8"/>
+        </Style>
+
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#1c1c1c"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#1a1630"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected">
+            <Setter Property="BorderBrush" Value="#7c5cfc44"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected TextBlock.AssetName">
+            <Setter Property="Foreground" Value="#a48bff"/>
+        </Style>
+
+        <Style Selector="TextBlock.AssetName">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Foreground" Value="#666666"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="MaxWidth" Value="64"/>
+        </Style>
+
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto, Auto, *">
+
+        <Border Grid.Row="0"
+                Background="#161616"
+                BorderBrush="#1e1e1e"
+                BorderThickness="0,0,0,1"
+                Padding="10,8">
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Rectangle Width="3" Height="12" Fill="#c8871a" RadiusX="2" RadiusY="2"/>
+                <TextBlock Classes="PanelLabel" Text="CONTENT BROWSER"/>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="1"
+                Background="#161616"
+                BorderBrush="#1e1e1e"
+                BorderThickness="0,0,0,1"
+                Padding="10,5">
+            <Grid ColumnDefinitions="*, Auto">
+                <StackPanel x:Name="BreadcrumbContainer" 
+                            Grid.Column="0"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <TextBlock Classes="BreadcrumbSegment" Text="Assets"/>
+                    <TextBlock Classes="BreadcrumbSep" Text="›"/>
+                </StackPanel>
+                <Button Grid.Column="1" Classes="FilterBtn" Content="⊟ Filter"/>
+            </Grid>
+        </Border>
+
+        <ListBox x:Name="AssetListBox" 
+                 Grid.Row="2"
+                 ItemsSource="{Binding Assets}">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel/>
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="resources:AssetInfo">
+                    <StackPanel Width="72" Spacing="5" HorizontalAlignment="Center">
+                        <Border Height="44"
+                                CornerRadius="4"
+                                Background="#1c1c1c"
+                                BorderBrush="#262626"
+                                BorderThickness="1">
+                            <PathIcon Data="{Binding Type, Converter={x:Static helpers:AssetTypeToIconConverter.Instance}}"
+                                      Foreground="{Binding Type, Converter={x:Static helpers:TypeToForegroundConverter.Instance}}"
+                                      Width="18"
+                                      Height="18"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Classes="AssetName"
+                                   Text="{Binding RelativePath, Converter={x:Static helpers:PathToNameConverter.Instance}}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+    </Grid>
+</UserControl>

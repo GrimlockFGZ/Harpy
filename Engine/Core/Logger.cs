@@ -6,12 +6,16 @@ public static class Logger
 {
     public enum LogLevel { Trace, Success, Info, Warning, Error, Fatal }
 
+    public static LogLevel MinLevel { get; set; } = LogLevel.Trace;
+
     public static void Log(
         LogLevel level, 
         string message, 
         [CallerFilePath] string filePath = "", 
         [CallerLineNumber] int lineNumber = 0)
     {
+        if (level < MinLevel) return;
+
         var fileName = Path.GetFileName(filePath);
         var prevColor = Console.ForegroundColor;
 

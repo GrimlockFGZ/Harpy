@@ -1,3 +1,4 @@
+using Engine.Core;
 using HarpyEngine.Resources.Mnemosyne;
 using Silk.NET.OpenGL;
 
@@ -5,9 +6,10 @@ namespace HarpyEngine.Rendering.Helios;
 
 public class RenderBridge
 {
-    private readonly GL _gl;
+    private readonly GlContext _gl;
+    private readonly List<IDisposable> _subscriptions = [];
 
-    public RenderBridge(GL gl)
+    public RenderBridge(GlContext gl)
     {
         _gl = gl;
         
@@ -15,8 +17,7 @@ public class RenderBridge
         ResourceManager.OnShaderRequest -= HandleShaderRequest;
         ResourceManager.OnShaderRequest += HandleShaderRequest;
 
-        ResourceManager.OnReloadRequest -= HandleReloadRequest;
-        ResourceManager.OnReloadRequest += HandleReloadRequest;
+        _subscriptions.Add(Event<ReloadRequested>.Subscribe(evt => HandleReloadRequest(evt.Resource)));
     }
 
     private Shader HandleShaderRequest(string vPath, string fPath)

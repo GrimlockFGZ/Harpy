@@ -1,51 +1,68 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:editor="clr-namespace:HarpyEngine.Sandbox.Editor"
-        xmlns:global="clr-namespace:"
-        xmlns:helpers="clr-namespace:HarpyEngine.Sandbox.Helpers"
-        xmlns:mnemosyne="clr-namespace:HarpyEngine.Resources.Mnemosyne;assembly=Engine.Resources"
+        xmlns:docking="clr-namespace:HarpyEngine.Sandbox.Editor.Docking"
         x:Class="HarpyEngine.Sandbox.Editor.EditorWindow"
         x:DataType="editor:EditorWindow"
-        x:CompileBindings ="True"
-        Title="Harpy Engine">
+        x:CompileBindings="True"
+        Title="Harpy Engine"
+        Background="#0f0f0f">
 
-    <Grid RowDefinitions="*, 4, 250" ColumnDefinitions="250, 4, *, 4, 300">
+    <Window.Styles>
+        <Style Selector="GridSplitter">
+            <Setter Property="Background" Value="#0a0a0a"/>
+        </Style>
         
-        <editor:Hierarchy x:Name="HierarchyPanel" Grid.Row="0" Grid.Column="0" Grid.RowSpan="3" Background="#2d2d2d"/>
-        
-        <GridSplitter Grid.Row="0" Grid.Column="1" Grid.RowSpan="3" Background="Black"/>
+        <Style Selector="Menu">
+            <Setter Property="Background" Value="#161616"/>
+            <Setter Property="BorderBrush" Value="#222222"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style Selector="MenuItem">
+            <Setter Property="Foreground" Value="#b5b5b5"/>
+            <Setter Property="Padding" Value="12,5"/>
+        </Style>
+        <Style Selector="MenuItem:pointerover /template/ ContentPresenter#PART_HeaderPresenter">
+            <Setter Property="Foreground" Value="#ffffff"/>
+        </Style>
+        <Style Selector="MenuItem:selected /template/ ContentPresenter#PART_HeaderPresenter">
+            <Setter Property="Foreground" Value="#ffffff"/>
+        </Style>
+    </Window.Styles>
 
-        <editor:HarpyViewport Grid.Row="0" Grid.Column="2" />
-        
-        <GridSplitter Grid.Row="1" Grid.Column="2" Background="Black" ResizeDirection="Rows"/>
-        
-        <ListBox Grid.Row="2" Grid.Column="2" 
-                 ItemsSource="{Binding UiAssets}" 
-                 Background="#2d2d2d">
-            <ListBox.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel />
-                </ItemsPanelTemplate>
-            </ListBox.ItemsPanel>
-            <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="mnemosyne:AssetDatabase+AssetInfo">
-                    <StackPanel Width="90" Margin="5">
-                        <Border Height="60" 
-                                Background="{Binding Type, Converter={x:Static helpers:TypeToBrushConverter.Instance}}" 
-                                CornerRadius="4" />
-                        <TextBlock Text="{Binding RelativePath, Converter={x:Static helpers:PathToNameConverter.Instance}}" 
-                                   FontSize="10" Foreground="White" HorizontalAlignment="Center" 
-                                   TextAlignment="Center" TextWrapping="Wrap"/>
-                    </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New Project" Click="OnNewProjectClicked" />
+                <MenuItem Header="_Open Project..."/>
+                <Separator/>
+                <MenuItem Header="_Save Scene" HotKey="Ctrl+S"/>
+                <Separator/>
+                <MenuItem Header="_Exit"/>
+            </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Undo" HotKey="Ctrl+Z"/>
+                <MenuItem Header="_Redo" HotKey="Ctrl+Y"/>
+                <Separator/>
+                <MenuItem Header="Cut" HotKey="Ctrl+X"/>
+                <MenuItem Header="Copy" HotKey="Ctrl+C"/>
+                <MenuItem Header="Paste" HotKey="Ctrl+V"/>
+                <Separator/>
+                <MenuItem Header="Project Settings..." Click="OnProjectSettingsClicked"/>
+            </MenuItem>
+            <MenuItem Header="_Window">
+                <MenuItem Header="Hierarchy" Click="OnReopenHierarchyClicked"/>
+                <MenuItem Header="Inspector" Click="OnReopenInspectorClicked"/>
+                <MenuItem Header="Content Browser" Click="OnReopenContentBrowserClicked"/>
+                <MenuItem Header="Console" Click="OnReopenConsoleClicked"/>
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="Documentation"/>
+                <MenuItem Header="About Harpy Engine"/>
+            </MenuItem>
+        </Menu>
 
-        <GridSplitter Grid.Row="0" Grid.Column="3" Grid.RowSpan="3" Background="Black"/>
-        
-        <Border Grid.Row="0" Grid.Column="4" Grid.RowSpan="3" Background="#2d2d2d">
-            <TextBlock Text="Inspector" Margin="10" Foreground="White"/>
-        </Border>
-        
-    </Grid>
+        <docking:DockHost x:Name="RootDock"/>
+    </DockPanel>
 </Window>

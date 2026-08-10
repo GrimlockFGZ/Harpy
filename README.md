@@ -40,4 +40,3 @@ Harpy/
 │   ├── Editor/             # Editor UI components
 │   └── Sandbox.csproj
 └── HarpyEngine.slnx        # Solution file
-```
