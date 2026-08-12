@@ -1,6 +1,6 @@
-
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
@@ -153,14 +153,14 @@ private static void LaunchAssetFile(AssetInfo asset)
     {
         var startInfo = new ProcessStartInfo();
 
-        if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             startInfo.FileName = "xdg-open";
             startInfo.Arguments = $"\"{asset.AbsolutePath}\"";
             startInfo.UseShellExecute = false;
             startInfo.CreateNoWindow = true;
         }
-        else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             startInfo.FileName = asset.AbsolutePath;
             startInfo.UseShellExecute = true;

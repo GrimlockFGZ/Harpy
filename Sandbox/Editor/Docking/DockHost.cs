@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
 
 namespace HarpyEngine.Sandbox.Editor.Docking;
 
@@ -29,8 +30,15 @@ public sealed class DockHost : Grid
             field = value;
             if (field is not null)
             {
-                if (field.View.Parent is Panel oldPanel) oldPanel.Children.Remove(field.View);
-                else if (field.View.Parent is Decorator dec) dec.Child = null;
+                switch (field.View.Parent)
+                {
+                    case Panel oldPanel:
+                        oldPanel.Children.Remove(field.View);
+                        break;
+                    case Decorator dec:
+                        dec.Child = null;
+                        break;
+                }
 
                 field.Parent = null;
                 DockSplit.PropagateHost(field, this);
@@ -61,7 +69,8 @@ public sealed class DockHost : Grid
     /// <summary>Adds an item as a new tab in the first available group (used to reopen a closed panel).</summary>
     public void AddToFirstGroup(DockItem item)
     {
-        var group = EnumerateGroups(Root).FirstOrDefault();
+        var groups = CollectGroups(Root);
+        var group = groups.Count > 0 ? groups[0] : null;
         if (group is not null)
         {
             group.AddItem(item);
@@ -117,12 +126,12 @@ public sealed class DockHost : Grid
             if (ReferenceEquals(Root, source) && source.Items.Count == 1) return;
             
             var screenPoint = ToScreenPoint(pointInHost);
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            Dispatcher.UIThread.Post(() =>
             {
                 source.RemoveItem(item);
                 var floating = new DockFloatingWindow(item, this, screenPoint);
                 floating.Show();
-            }, Avalonia.Threading.DispatcherPriority.Background);
+            }, DispatcherPriority.Background);
 
         
             return;
@@ -195,9 +204,13 @@ public sealed class DockHost : Grid
     private DockGroup? FindGroupAt(Point pointInHost)
     {
         DockGroup? found = null;
+        var groups = CollectGroups(Root);
 
-        foreach (var group in EnumerateGroups(Root))
+        // Manual for-loop over a pooled List<T> — no enumerator boxing/allocation, unlike foreach
+        // over an IEnumerable<T> produced by a yield-return iterator.
+        for (var i = 0; i < groups.Count; i++)
         {
+            var group = groups[i];
             var origin = group.TranslatePoint(new Point(0, 0), this);
             if (origin is null) continue;
 
@@ -212,13 +225,52 @@ public sealed class DockHost : Grid
         return found;
     }
 
+    // Reused every call so CollectGroups settles to zero heap allocations after the buffer's
+    // capacity stabilizes (List<T>.Clear() keeps its backing array).
+    private readonly List<DockGroup> _groupBuffer = new();
+
+    /// <summary>
+    /// Non-allocating replacement for the old EnumerateGroups(...) yield-return iterator.
+    /// FindGroupAt runs on every PointerMoved while a tab is being dragged, so that method was
+    /// generating a fresh iterator state machine (plus one per recursion level for nested splits)
+    /// on every mouse-move frame during a drag — the actual source of drag-time GC churn.
+    /// </summary>
+    private List<DockGroup> CollectGroups(IDockNode? node)
+    {
+        _groupBuffer.Clear();
+        CollectGroupsInto(node, _groupBuffer);
+        return _groupBuffer;
+    }
+
+    private static void CollectGroupsInto(IDockNode? node, List<DockGroup> buffer)
+    {
+        switch (node)
+        {
+            case null:
+                return;
+            case DockGroup group:
+                buffer.Add(group);
+                return;
+            case DockSplit split:
+                CollectGroupsInto(split.First, buffer);
+                CollectGroupsInto(split.Second, buffer);
+                return;
+        }
+    }
+
     private static DockSide ComputeZone(Point local, Size size)
     {
         var xf = size.Width <= 0 ? 0 : local.X / size.Width;
         var yf = size.Height <= 0 ? 0 : local.Y / size.Height;
 
-        if (xf < EdgeFraction) return DockSide.Left;
-        if (xf > 1 - EdgeFraction) return DockSide.Right;
+        switch (xf)
+        {
+            case < EdgeFraction:
+                return DockSide.Left;
+            case > 1 - EdgeFraction:
+                return DockSide.Right;
+        }
+
         if (yf < EdgeFraction) return DockSide.Top;
         if (yf > 1 - EdgeFraction) return DockSide.Bottom;
 
@@ -258,31 +310,10 @@ public sealed class DockHost : Grid
         _indicator.Height = h;
     }
 
-    private static IEnumerable<DockGroup> EnumerateGroups(IDockNode? node)
-    {
-        while (true)
-        {
-            switch (node)
-            {
-                case null:
-                    yield break;
-                case DockGroup group:
-                    yield return group;
-                    break;
-                case DockSplit split:
-                    foreach (var g in EnumerateGroups(split.First)) yield return g;
-                    node = split.Second;
-                    continue;
-            }
-
-            break;
-        }
-    }
-
-    private readonly Queue<System.Action> _pendingMutations = new();
+    private readonly Queue<Action> _pendingMutations = new();
     private bool _isMutating;
 
-    internal void EnqueueMutation(System.Action mutation)
+    internal void EnqueueMutation(Action mutation)
     {
         _pendingMutations.Enqueue(mutation);
         ProcessQueue();
@@ -293,7 +324,7 @@ public sealed class DockHost : Grid
         if (_isMutating) return;
         _isMutating = true;
 
-        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.Post(() =>
         {
             try
             {
@@ -313,6 +344,6 @@ public sealed class DockHost : Grid
                     ProcessQueue();
                 }
             }
-        }, Avalonia.Threading.DispatcherPriority.Normal);
+        }, DispatcherPriority.Normal);
     }
 }

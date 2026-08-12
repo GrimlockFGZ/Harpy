@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform;
 using Engine;
 using Engine.Core;
 using HarpyEngine.Rendering.Voxel;
@@ -43,7 +44,7 @@ public partial class EditorWindow : Window
         Height = 1080;
 
         var assetUri = new Uri("avares://Sandbox/Assets/Favicon.ico");
-        Icon = new WindowIcon(Avalonia.Platform.AssetLoader.Open(assetUri));
+        Icon = new WindowIcon(AssetLoader.Open(assetUri));
 
         _hierarchyViewModel.SetRegistry(_registry);
 
@@ -78,7 +79,7 @@ public partial class EditorWindow : Window
     private void BuildDockLayout()
     {
         _hierarchyItem = new DockItem("hierarchy", "HIERARCHY", Brush.Parse("#7c5cfc"), _hierarchyPanel, DockSide.Left);
-        var viewportItem = new DockItem("viewport", "VIEWPORT", Brush.Parse("#5bc0de"), _viewportPanel, DockSide.Center) { CanClose = false };
+        var viewportItem = new DockItem("viewport", "VIEWPORT", Brush.Parse("#5bc0de"), _viewportPanel) { CanClose = false };
         _contentBrowserItem = new DockItem("content-browser", "CONTENT BROWSER", Brush.Parse("#f39c12"), _contentBrowserPanel, DockSide.Bottom);
         _consoleItem = new DockItem("console", "CONSOLE", Brush.Parse("#1ca880"), _consolePanel, DockSide.Bottom);
         _inspectorItem = new DockItem("inspector", "INSPECTOR", Brush.Parse("#a48bff"), _inspectorPanel, DockSide.Right);
@@ -123,7 +124,7 @@ public partial class EditorWindow : Window
         for (var i = 0; i < solidTypes.Length; i++)
         {
             var entity = _registry.CreateEntity();
-            _registry.AddComponent(entity, new Engine.Transform(new Vector3(i * 2f, 0f, 0f)));
+            _registry.AddComponent(entity, new Transform(new Vector3(i * 2f, 0f, 0f)));
             _registry.AddComponent(entity, new VoxelBlock(solidTypes[i]));
         }
 

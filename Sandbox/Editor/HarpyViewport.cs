@@ -1,13 +1,13 @@
 using System.Diagnostics;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.OpenGL;
 using Avalonia.OpenGL.Controls;
 using Avalonia.Rendering;
 using Avalonia.Threading;
-using Avalonia.Controls;
 using Engine;
-using Engine.Core; 
+using Engine.Core;
 using HarpyEngine.Rendering.Helios;
 using HarpyEngine.Sandbox.Editor.Models;
 using Silk.NET.OpenGL;

@@ -3,8 +3,6 @@ using HarpyEngine.Exceptions;
 
 namespace HarpyEngine.Resources.Mnemosyne;
 
-using Engine.Core;
-
 public record struct ReloadRequested(object Resource) : IEvent;
 
 public static class ResourceManager

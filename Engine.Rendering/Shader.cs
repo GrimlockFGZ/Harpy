@@ -1,3 +1,4 @@
+using Engine;
 using Engine.Core;
 using Engine.Exceptions;
 using HarpyEngine.Rendering.Helios;
@@ -45,7 +46,7 @@ public class Shader
     /// <summary>
     /// Uploads a 4x4 matrix uniform. Assumes this shader is already bound via <see cref="Use"/>.
     /// </summary>
-    public unsafe void SetMatrix4(string name, in Engine.Matrix4x4 matrix)
+    public unsafe void SetMatrix4(string name, in Matrix4x4 matrix)
     {
         var location = _gl.Api.GetUniformLocation(Handle, name);
         if (location == -1) return;

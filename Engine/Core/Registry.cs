@@ -1,5 +1,5 @@
-using HarpyEngine.Exceptions;
 using System.Runtime.CompilerServices;
+using HarpyEngine.Exceptions;
 
 namespace Engine.Core;
 

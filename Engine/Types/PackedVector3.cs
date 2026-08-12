@@ -1,6 +1,8 @@
+using System.Runtime.InteropServices;
+
 namespace Engine;
 
-[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential)]
 public readonly struct PackedVertex : IEquatable<PackedVertex>
 {
     // Layout: [Light:4] [BlockID:7] [Normal:3] [Z:6] [Y:6] [X:6]

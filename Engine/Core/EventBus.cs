@@ -1,7 +1,9 @@
+using Engine.Core;
+
 public interface IEvent;
 
-public record struct EntityCreated(Engine.Core.Entity Entity) : IEvent;
-public record struct EntityDestroyed(Engine.Core.Entity Entity) : IEvent;
+public record struct EntityCreated(Entity Entity) : IEvent;
+public record struct EntityDestroyed(Entity Entity) : IEvent;
 
 public static class Event<T> where T : IEvent
 {

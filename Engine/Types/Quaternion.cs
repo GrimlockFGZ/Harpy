@@ -58,14 +58,14 @@ public readonly struct Quaternion : IEquatable<Quaternion>, IFormattable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Vector3 Rotate(Vector3 v)
     {
-        return System.Numerics.Vector3.Transform(v, (SNQuaternion)this);
+        return System.Numerics.Vector3.Transform(v, this);
     }
 
     /// <summary>Rotates a vector by the inverse (conjugate) of this quaternion.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Vector3 InverseRotate(Vector3 v)
     {
-        return System.Numerics.Vector3.Transform(v, SNQuaternion.Conjugate((SNQuaternion)this));
+        return System.Numerics.Vector3.Transform(v, SNQuaternion.Conjugate(this));
     }
 
     // --- Factories & Rotation Utilities ---

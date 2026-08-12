@@ -1,8 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
-using System.Diagnostics;
-using System.IO;
 
 namespace HarpyEngine.Sandbox.Editor.Docking;
 
@@ -11,31 +9,6 @@ namespace HarpyEngine.Sandbox.Editor.Docking;
 /// </summary>
 public sealed class DockSplit : Grid, IDockNode
 {
-    private static readonly StreamWriter? _logWriter;
-
-    static DockSplit()
-    {
-        try
-        {
-            // Initializes a dedicated log file in the base execution directory
-            string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "docking_debug.log");
-            _logWriter = new StreamWriter(logPath, append: false) { AutoFlush = true };
-            _logWriter.WriteLine($"=== DockSplit Logging Initialized at {System.DateTime.Now} ===");
-        }
-        catch
-        {
-            // Fallback gracefully if file permissions or paths fail
-            _logWriter = null;
-        }
-    }
-
-    private static void Log(string message)
-    {
-        string formattedMessage = $"[DockSplit] [{System.DateTime.Now:HH:mm:ss.fff}] {message}";
-        Debug.WriteLine(formattedMessage);
-        _logWriter?.WriteLine(formattedMessage);
-    }
-
     public DockSplit? Parent { get; set; }
     public DockHost? Host { get; set; }
     public Control View => this;
@@ -48,8 +21,6 @@ public sealed class DockSplit : Grid, IDockNode
 
     public DockSplit(Orientation orientation, IDockNode first, IDockNode second, double firstRatio = 1, double secondRatio = 1)
     {
-        Log($"Initializing new DockSplit with Orientation: {orientation}");
-
         Orientation = orientation;
         First = first;
         Second = second;
@@ -93,24 +64,19 @@ public sealed class DockSplit : Grid, IDockNode
     /// <summary>Swaps one of this split's children out for a different node (used when splitting/collapsing).</summary>
     internal void ReplaceChild(IDockNode oldChild, IDockNode newChild)
     {
-        Log($"ReplaceChild requested. OldChild Type: {oldChild.GetType().Name}, NewChild Type: {newChild.GetType().Name}");
-
         Control oldView;
         if (ReferenceEquals(First, oldChild)) 
         { 
-            Log("Match found on 'First' child slot.");
             oldView = First.View; 
             First = newChild; 
         }
         else if (ReferenceEquals(Second, oldChild)) 
         { 
-            Log("Match found on 'Second' child slot.");
             oldView = Second.View; 
             Second = newChild; 
         }
         else 
         {
-            Log("WARNING: oldChild was not found in either First or Second slots!");
             return;
         }
 
@@ -143,24 +109,34 @@ public sealed class DockSplit : Grid, IDockNode
             }
 
             Children.Insert(index, newChild.View);
-            Log("Successfully swapped child view safely via index removal/insertion.");
         }
         else
         {
-            Log("ERROR: oldView index was negative (-1). Performing safe full rebuild.");
             RebuildVisual();
         }
     }
-    /// <summary>Assigns <paramref name="host"/> to every node in the subtree rooted at <paramref name="node"/>.</summary>
+    
+    private static readonly Stack<IDockNode> _propagateStack = new();
     internal static void PropagateHost(IDockNode? node, DockHost? host)
     {
         if (node is null) return;
 
-        node.Host = host;
-        if (node is DockSplit split)
+        var stack = _propagateStack;
+        var startDepth = stack.Count;
+        stack.Push(node);
+
+        while (stack.Count > startDepth)
         {
-            PropagateHost(split.First, host);
-            PropagateHost(split.Second, host);
+            var current = stack.Pop();
+            current.Host = host;
+
+            if (current is DockSplit split)
+            {
+                // Push Second first so First pops (and is fully processed) before it —
+                // preserves the original pre-order (self, then First's subtree, then Second's).
+                stack.Push(split.Second);
+                stack.Push(split.First);
+            }
         }
     }
 
@@ -170,25 +146,20 @@ public sealed class DockSplit : Grid, IDockNode
     /// </summary>
     internal void Collapse(IDockNode emptyChild)
     {
-        Log("Collapse triggered because a child became empty.");
-
         var sibling = ReferenceEquals(First, emptyChild) ? Second : First;
         sibling.Parent = null;
 
         if (Parent is not null)
-        {
-            Log("Promoting sibling via Parent.ReplaceChild.");
+        { 
             Parent.ReplaceChild(this, sibling);
         }
         else if (Host is not null)
         {
-            Log("Promoting sibling as root of Host.");
             Host.Root = sibling;
         }
     }
     private void RebuildVisual()
     {
-        Log($"RebuildVisual executing. Clear existing children count: {Children.Count}");
         Children.Clear();
 
         DetachFromVisualParent(First.View);
@@ -210,8 +181,6 @@ public sealed class DockSplit : Grid, IDockNode
         Children.Add(First.View);
         Children.Add(_splitter);
         Children.Add(Second.View);
-
-        Log($"RebuildVisual completed. New children count: {Children.Count}");
     }
 
     private static void DetachFromVisualParent(Control view)

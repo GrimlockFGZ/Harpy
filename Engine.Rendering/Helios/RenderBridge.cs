@@ -1,6 +1,4 @@
-using Engine.Core;
 using HarpyEngine.Resources.Mnemosyne;
-using Silk.NET.OpenGL;
 
 namespace HarpyEngine.Rendering.Helios;
 

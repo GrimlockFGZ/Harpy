@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Layout;
 using Avalonia.Media;
 
 namespace HarpyEngine.Sandbox.Editor.Docking;
@@ -11,6 +10,16 @@ namespace HarpyEngine.Sandbox.Editor.Docking;
 /// </summary>
 public sealed class DockFloatingWindow : Window
 {
+    private readonly DockItem _item;
+    private readonly DockHost _mainHost;
+    private readonly RowDefinition _autoLenghtRowDefinition = new() { Height = GridLength.Auto };
+    private readonly RowDefinition _starRowDefinition = new()
+    { 
+        Height = new GridLength(1, GridUnitType.Star) 
+    };
+    
+    private readonly DockGroup _group = new();
+
     public DockFloatingWindow(DockItem item, DockHost mainHost, PixelPoint position)
     {
         Title = item.Title;
@@ -20,8 +29,8 @@ public sealed class DockFloatingWindow : Window
         Position = new PixelPoint(position.X - 20, position.Y - 12);
 
         var root = new Grid();
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition(1, GridUnitType.Star));
+        root.RowDefinitions.Add(_autoLenghtRowDefinition);
+        root.RowDefinitions.Add(_starRowDefinition);
 
         var toolbar = new Border
         {
@@ -42,22 +51,26 @@ public sealed class DockFloatingWindow : Window
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(3)
         };
-        var group = new DockGroup();
 
-        dockButton.Click += (_, _) =>
-        {
-            group.RemoveItem(item);
-            mainHost.AddToFirstGroup(item);
-            Close();
-        };
+
+
+        dockButton.Click += (sender, e) => DoDockBack(item, mainHost, _group);
+
         toolbar.Child = dockButton;
         Grid.SetRow(toolbar, 0);
-        
-        group.AddItem(item);
-        Grid.SetRow(group, 1);
+
+        _group.AddItem(item);
+        Grid.SetRow(_group, 1);
 
         root.Children.Add(toolbar);
-        root.Children.Add(group);
+        root.Children.Add(_group);
         Content = root;
+    }
+
+    private void DoDockBack(DockItem item, DockHost mainHost, DockGroup group)
+    {
+        group.RemoveItem(item);
+        mainHost.AddToFirstGroup(item);
+        Close();
     }
 }

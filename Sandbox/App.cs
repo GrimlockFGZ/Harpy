@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 using Engine.Core;
 using HarpyEngine.Sandbox.Editor;
@@ -10,7 +11,7 @@ public class App : Application
 {
     public override void Initialize()
     {
-        Styles.Add(new Avalonia.Themes.Fluent.FluentTheme());
+        Styles.Add(new FluentTheme());
     }
 
     public override void OnFrameworkInitializationCompleted()
